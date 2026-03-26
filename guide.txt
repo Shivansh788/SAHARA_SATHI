@@ -1,0 +1,54 @@
+Sahara Saathi Project Guide
+===========================
+
+This guide provides step-by-step instructions to install and run the Sahara Saathi AI Welfare Dashboard without errors.
+
+Table of Contents:
+1. Prerequisites
+2. Installation
+3. Running the Application
+4. Fallback Modes (How it works offline)
+5. Troubleshooting
+
+1. Prerequisites
+----------------
+- Python 3.10 or higher
+- Ollama (Optional, for local AI fallback)
+- Internet connection (First time only, for downloading embeddings)
+
+2. Installation
+---------------
+Step A: Clone or Navigate to the project directory
+Step B: Create a virtual environment
+    python -m venv venv
+Step C: Activate the virtual environment
+    Linux/Mac: source venv/bin/activate
+    Windows: venv\Scripts\activate
+Step D: Install all dependencies
+    pip install -r requirements.txt
+
+3. Running the Application
+--------------------------
+To start the dashboard, run:
+    python app.py
+
+Once started, open your browser at:
+    http://localhost:8501
+
+4. Fallback Modes (Offline Support)
+-----------------------------------
+This project is designed to work even without the main college network (UPESNET).
+
+Tier 1 (Online - UPESNET): USES coeai (DeepSeek-R1 70B) for high-quality answers.
+Tier 2 (Home - Local AI): Uses Ollama with llama3.1. 
+    - To use this, ensure Ollama is installed and run: ollama run llama3.1
+Tier 3 (Restricted Offline): If both above fail, the system will directly show you the most relevant document snippets (text-snapshots) from the Sahara database.
+
+5. Troubleshooting
+------------------
+- "Address already in use": This means another instance is running on port 8501. Kill it before starting again.
+- "ModuleNotFoundError": Ensure you have activated your venv and run `pip install -r requirements.txt`.
+- CSS/UI Looks Weird: Ensure you have an internet connection to load the Tailwind CDN scripts.
+
+===========================
+Sahara Saathi - Empathetic Welfare Guidance

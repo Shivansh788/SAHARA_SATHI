@@ -1,0 +1,84 @@
+SAHARA SAATHI - CURRENT STATUS
+Date: 2026-03-28
+
+Purpose
+-------
+This file is a quick handoff status for engineers/agents to understand what is complete and how to run safely.
+
+
+Major Completed Work
+--------------------
+1) Retrieval and synthesis pipeline
+- Hybrid retrieval: BM25 + FAISS + RRF + reranker.
+- Knowledge graph hints integrated in /api/ask.
+- Structured synthesis with citations, follow-up prompts, and mode support.
+
+2) Auth and persistence
+- SQLite-backed users, orgs, events, bookmarks, chat messages.
+- User signup/login/me + bookmark APIs completed.
+- Organization register/verify/login + admin event creation completed.
+
+3) NGO events integration
+- data/ngo_events.csv is now migrated into SQLite events table.
+- /api/ngos merges active event data for user discovery.
+
+4) Profile-memory safety fix (critical)
+- Added dedicated profile_facts table.
+- Only explicit user-declared facts are stored and reused.
+- Prevented false personal claims like random "you are 10 years old".
+
+5) Config centralization
+- Runtime settings and keys are centralized in config.py.
+- Docs updated to avoid exposing secrets in markdown.
+
+
+Current Database Coverage
+-------------------------
+- Government schemes: loaded via data/Gov_schemes*.csv
+- NGOs: loaded via data/ngo_data.csv
+- NGO events: loaded via data/ngo_events.csv
+- Chat memory: chat_messages table
+- Explicit profile memory: profile_facts table
+
+
+One-Click Local Run
+-------------------
+python3 -m venv venv && source venv/bin/activate && pip install -U pip && pip install -r requirements.txt && python db_migrate.py && python app.py
+
+Open: http://localhost:8501
+
+
+Fast Verification Commands
+--------------------------
+1) Health
+   curl -s http://127.0.0.1:8501/api/health
+
+2) Events loaded
+   curl -s http://127.0.0.1:8501/api/events
+
+3) Ask smoke test
+   curl -sS -X POST http://127.0.0.1:8501/api/ask -H "Content-Type: application/json" -d '{"query":"pm kisan eligibility","session_id":"smoke1","language":"english","mode":"citizen"}'
+
+
+Important Implementation Rules
+------------------------------
+- Do not infer personal profile facts from ambiguous text.
+- Persist only explicit statements like:
+  - "my age is 35"
+  - "my name is Ramesh"
+  - "i am from Jaipur"
+- Keep config.py as source of truth for runtime toggles.
+
+
+If Something Breaks
+-------------------
+1) Reinstall deps
+   source venv/bin/activate
+   pip install -r requirements.txt
+
+2) Rebuild DB data
+   python db_migrate.py
+
+3) Restart backend
+   pkill -f "python.*app.py"
+   python app.py

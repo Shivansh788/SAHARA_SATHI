@@ -1,6 +1,7 @@
 import requests
 import socket
 import os
+import time
 from threading import Thread
 import re
 
@@ -12,6 +13,12 @@ OLLAMA_CONNECT_TIMEOUT_SEC = config.OLLAMA_CONNECT_TIMEOUT_SEC
 OLLAMA_READ_TIMEOUT_SEC = config.OLLAMA_READ_TIMEOUT_SEC
 COEAI_TIMEOUT_SEC = config.COEAI_TIMEOUT_SEC
 COEAI_HEALTH_TIMEOUT_SEC = config.COEAI_HEALTH_TIMEOUT_SEC
+GEMINI_TIMEOUT_SEC = config.GEMINI_TIMEOUT_SEC
+
+_GEMINI_DISABLED_UNTIL = 0.0
+_GEMINI_DISABLED_REASON = ""
+_OLLAMA_DISABLED_UNTIL = 0.0
+_OLLAMA_DISABLED_REASON = ""
 
 
 def _is_connected_to_upesnet(timeout_sec=3):
@@ -234,12 +241,24 @@ def _humanize_answer(answer):
 
 
 def _generate_with_ollama(prompt):
+    global _OLLAMA_DISABLED_UNTIL, _OLLAMA_DISABLED_REASON
+
+    if time.time() < _OLLAMA_DISABLED_UNTIL:
+        wait_left = int(_OLLAMA_DISABLED_UNTIL - time.time())
+        raise RuntimeError(
+            f"Ollama temporarily disabled for {wait_left}s: {_OLLAMA_DISABLED_REASON}"
+        )
+
     response = requests.post(
         "http://localhost:11434/api/generate",
         json={
             "model": "llama3.1",
             "prompt": prompt,
             "stream": False,
+            "options": {
+                "num_predict": 700,
+                "temperature": 0.2,
+            },
         },
         timeout=(OLLAMA_CONNECT_TIMEOUT_SEC, OLLAMA_READ_TIMEOUT_SEC),
     )
@@ -247,6 +266,62 @@ def _generate_with_ollama(prompt):
         raise RuntimeError(f"Ollama HTTP {response.status_code}")
     payload = response.json()
     return payload.get("response", "No response content from Ollama.")
+
+
+def _generate_with_gemini(prompt):
+    global _GEMINI_DISABLED_UNTIL, _GEMINI_DISABLED_REASON
+
+    if time.time() < _GEMINI_DISABLED_UNTIL:
+        wait_left = int(_GEMINI_DISABLED_UNTIL - time.time())
+        raise RuntimeError(
+            f"Gemini temporarily disabled for {wait_left}s: {_GEMINI_DISABLED_REASON}"
+        )
+
+    api_key = (getattr(config, "GEMINI_API_KEY", "") or "").strip()
+    if not api_key:
+        raise RuntimeError("Gemini API key is not configured")
+
+    model = (getattr(config, "GEMINI_MODEL", "gemini-1.5-flash") or "gemini-1.5-flash").strip()
+    url = (
+        f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+        f"?key={api_key}"
+    )
+
+    payload = {
+        "contents": [
+            {
+                "parts": [
+                    {"text": prompt}
+                ]
+            }
+        ]
+    }
+
+    response = requests.post(url, json=payload, timeout=(3.0, GEMINI_TIMEOUT_SEC))
+    if response.status_code != 200:
+        response_preview = response.text[:300]
+        # Fast-fail invalid keys so later requests do not keep waiting on Gemini.
+        if response.status_code in (400, 401, 403) and (
+            "API key not valid" in response_preview
+            or "INVALID_ARGUMENT" in response_preview
+            or "PERMISSION_DENIED" in response_preview
+        ):
+            _GEMINI_DISABLED_UNTIL = time.time() + 600
+            _GEMINI_DISABLED_REASON = "invalid API key"
+        raise RuntimeError(f"Gemini HTTP {response.status_code}: {response.text[:220]}")
+
+    data = response.json()
+    candidates = data.get("candidates", [])
+    if not candidates:
+        raise RuntimeError("Gemini returned no candidates")
+
+    parts = candidates[0].get("content", {}).get("parts", [])
+    text_parts = [p.get("text", "") for p in parts if isinstance(p, dict) and p.get("text")]
+    answer = "\n".join(text_parts).strip()
+    if not answer:
+        raise RuntimeError("Gemini returned empty text")
+
+    return answer
 
 
 def _ollama_is_reachable(timeout_sec=1.5):
@@ -342,13 +417,13 @@ def generate(query, ranked_docs, profile, llm, local_pipeline=None, history=None
     occupation = profile.get("occupation", "") if isinstance(profile, dict) else ""
 
     citations = _build_citations(ranked_docs)
-    context = "\n\n".join([doc.get("text", "") for doc in ranked_docs])
+    context = "\n\n".join([_compact_text(doc.get("text", ""), 850) for doc in ranked_docs])
     checklist_items = get_checklist(profile if isinstance(profile, dict) else {})
     checklist_str = "\n".join(f"- {item}" for item in checklist_items)
 
     history_str = ""
     if history:
-        for turn in history[-3:]:
+        for turn in history[-2:]:
             history_str += f"\nUser: {turn['user']}\nAI: {turn['assistant']}\n"
 
     prompt = f"""
@@ -418,30 +493,42 @@ Language: {prof_lang}
 
     worker_summary = _worker_summary(mode, query, citations)
 
-    # Primary free path: local Ollama. Skip quickly if daemon is offline.
+    # First attempt: Gemini.
+    try:
+        answer = _generate_with_gemini(prompt)
+        return _build_response(_humanize_answer(answer), citations, mode, follow_up, worker_summary=worker_summary)
+    except Exception as gemini_err:
+        print(f"Gemini generation failed: {gemini_err}. Trying COEAI...")
+
+    # Second attempt: COEAI (when configured/reachable).
+    try:
+        answer = _generate_with_external_llm(prompt, llm)
+        return _build_response(_humanize_answer(answer), citations, mode, follow_up, worker_summary=worker_summary)
+    except Exception as external_err:
+        print(f"COEAI fallback failed: {external_err}. Trying local Ollama Llama...")
+
+    # Third attempt: local Ollama Llama.
     if _ollama_is_reachable():
         try:
             answer = _generate_with_ollama(prompt)
             return _build_response(_humanize_answer(answer), citations, mode, follow_up, worker_summary=worker_summary)
         except Exception as ollama_err:
-            print(f"Ollama generation failed: {ollama_err}. Trying optional external LLM...")
+            err_text = str(ollama_err).lower()
+            if "read timed out" in err_text or "timeout" in err_text:
+                global _OLLAMA_DISABLED_UNTIL, _OLLAMA_DISABLED_REASON
+                _OLLAMA_DISABLED_UNTIL = time.time() + 300
+                _OLLAMA_DISABLED_REASON = "generation timeout"
+            print(f"Ollama generation failed: {ollama_err}. Returning context snippets...")
     else:
-        print("Ollama is not reachable. Skipping local generation and using fallback paths.")
+        print("Ollama is not reachable. Returning context snippets...")
 
-    # Optional non-free path only if explicitly configured.
-    try:
-        answer = _generate_with_external_llm(prompt, llm)
-        return _build_response(_humanize_answer(answer), citations, mode, follow_up, worker_summary=worker_summary)
-    except Exception as external_err:
-        print(f"External LLM fallback failed: {external_err}. Returning context snippets...")
+    # Final fallback: Structured answer for easy reading.
+    fallback_answer = _format_fallback_answer(query, ranked_docs, profile=profile)
 
-        # Tertiary fallback: Structured answer for easy reading.
-        fallback_answer = _format_fallback_answer(query, ranked_docs, profile=profile)
-
-        return _build_response(
-            fallback_answer,
-            citations,
-            mode,
-            follow_up,
-            worker_summary="",
-        )
+    return _build_response(
+        fallback_answer,
+        citations,
+        mode,
+        follow_up,
+        worker_summary="",
+    )

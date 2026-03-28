@@ -147,11 +147,13 @@ def _question_node(state: IntakeState) -> IntakeState:
 
     next_fact = ""
     for fact_key in FACT_ORDER:
-        if not str(profile.get(fact_key, "") or ""):
+        if not str(profile.get(fact_key, "") or "") and QUESTION_MAP[fact_key] not in pending:
             next_fact = fact_key
             break
 
     if not next_fact:
+        # No additional unanswered question can be added; terminate loop.
+        state["turn_count"] = 4
         return state
 
     next_question = QUESTION_MAP[next_fact]

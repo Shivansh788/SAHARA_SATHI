@@ -303,6 +303,10 @@ html_content = """<!DOCTYPE html>
                     <span class="material-symbols-outlined">description</span>
                     <span class="font-['Plus_Jakarta_Sans'] text-sm">Applications</span>
                 </a>
+                <a class="nav-link-side cursor-pointer flex items-center gap-4 px-4 py-3 rounded-xl text-slate-500 hover:text-blue-900 hover:bg-blue-50 transition-all duration-300" onclick="switchTab('events')" data-target="events">
+                    <span class="material-symbols-outlined">event</span>
+                    <span class="font-['Plus_Jakarta_Sans'] text-sm">NGO Events</span>
+                </a>
                 <a class="nav-link-side cursor-pointer flex items-center gap-4 px-4 py-3 rounded-xl text-slate-500 hover:text-blue-900 hover:bg-blue-50 transition-all duration-300" onclick="switchTab('chat')" data-target="chat">
                     <span class="material-symbols-outlined">forum</span>
                     <span class="font-['Plus_Jakarta_Sans'] text-sm">Chat Assistant</span>
@@ -519,6 +523,28 @@ html_content = """<!DOCTYPE html>
                         </div>
                     </div>
                 </div>
+            </div>
+
+            <!-- ================= VIEW: NGO EVENTS ================= -->
+            <div id="view-events" class="view-section hidden-view flex flex-col gap-8">
+                <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+                    <div>
+                        <h2 class="text-4xl font-extrabold font-headline text-primary">NGO Events Hub</h2>
+                        <p class="text-on-surface-variant text-sm mt-2">Find verified community camps, legal aid drives, and support events near you.</p>
+                    </div>
+                    <button onclick="switchTab('profile')" class="px-5 py-3 rounded-xl bg-primary text-white font-bold text-sm hover:bg-primary-container transition-all">Create Event (Org Admin)</button>
+                </div>
+
+                <div class="bg-white rounded-3xl premium-shadow p-6 border border-slate-100">
+                    <div class="grid md:grid-cols-4 gap-4">
+                        <input id="events-category-filter" type="text" placeholder="Filter by category (e.g., Healthcare)" class="h-12 px-4 rounded-xl border border-slate-200"/>
+                        <input id="events-location-filter" type="text" placeholder="Filter by location (e.g., Jaipur)" class="h-12 px-4 rounded-xl border border-slate-200"/>
+                        <button onclick="applyEventsFilter()" class="h-12 px-5 rounded-xl bg-primary text-white font-bold text-sm hover:bg-primary-container transition-all">Apply Filters</button>
+                        <button onclick="clearEventsFilter()" class="h-12 px-5 rounded-xl border border-slate-300 text-slate-700 font-bold text-sm hover:bg-slate-50 transition-all">Clear</button>
+                    </div>
+                </div>
+
+                <div id="events-grid-full" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
             </div>
 
             <!-- ================= VIEW: CHAT ASSISTANT ================= -->
@@ -859,6 +885,80 @@ html_content = """<!DOCTYPE html>
                         </div>
                     `;
                 }
+
+                async function fetchAndRenderEvents(category = '', location = '') {
+                    const container = document.getElementById('events-grid-full');
+                    if (!container) return;
+
+                    container.innerHTML = `
+                        <div class="col-span-full py-16 flex flex-col items-center justify-center text-slate-400 gap-3">
+                            <span class="material-symbols-outlined animate-spin text-4xl">sync</span>
+                            <p class="font-bold">Loading NGO events...</p>
+                        </div>
+                    `;
+
+                    try {
+                        const params = new URLSearchParams();
+                        if (category) params.set('category', category);
+                        if (location) params.set('location', location);
+                        const query = params.toString();
+                        const response = await fetch(`/api/events${query ? `?${query}` : ''}`);
+                        const data = await response.json();
+                        const events = data.events || [];
+
+                        if (!events.length) {
+                            container.innerHTML = `<div class="col-span-full text-center py-16 text-slate-400 font-semibold">No events found for selected filters.</div>`;
+                            return;
+                        }
+
+                        container.innerHTML = events.map(createEventCard).join('');
+                    } catch (error) {
+                        console.error(error);
+                        container.innerHTML = `<div class="col-span-full text-center py-16 text-red-400 font-bold">Could not load NGO events.</div>`;
+                    }
+                }
+
+                function createEventCard(eventItem) {
+                    const title = translateValue(eventItem.title || 'Community Event', window.currentLanguage);
+                    const category = translateValue(eventItem.category || 'General', window.currentLanguage);
+                    const location = translateValue(eventItem.location || 'Not specified', window.currentLanguage);
+                    const description = translateValue(eventItem.description || 'Details will be shared by organizers.', window.currentLanguage);
+                    const startDate = eventItem.start_date || 'TBA';
+                    const endDate = eventItem.end_date || 'TBA';
+                    const organizer = eventItem.org_name || 'Verified Organization';
+
+                    return `
+                        <div class="glass-card premium-shadow rounded-2xl p-6 border border-white/40 flex flex-col gap-4 h-full">
+                            <div class="flex items-start justify-between gap-3">
+                                <div>
+                                    <h3 class="text-lg font-extrabold text-primary leading-snug">${title}</h3>
+                                    <p class="text-xs text-slate-400 mt-1">By ${organizer}</p>
+                                </div>
+                                <span class="px-3 py-1 rounded-lg bg-orange-100 text-orange-700 text-[10px] font-bold uppercase tracking-wider">${category}</span>
+                            </div>
+                            <p class="text-sm text-on-surface-variant leading-relaxed">${description}</p>
+                            <div class="grid grid-cols-1 gap-2 text-xs text-slate-600">
+                                <div><b>Location:</b> ${location}</div>
+                                <div><b>Start:</b> ${startDate}</div>
+                                <div><b>End:</b> ${endDate}</div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                function applyEventsFilter() {
+                    const category = (document.getElementById('events-category-filter')?.value || '').trim();
+                    const location = (document.getElementById('events-location-filter')?.value || '').trim();
+                    fetchAndRenderEvents(category, location);
+                }
+
+                function clearEventsFilter() {
+                    const categoryInput = document.getElementById('events-category-filter');
+                    const locationInput = document.getElementById('events-location-filter');
+                    if (categoryInput) categoryInput.value = '';
+                    if (locationInput) locationInput.value = '';
+                    fetchAndRenderEvents();
+                }
         // ---------------- TAB SWITCHING LOGIC ----------------
         function switchTab(tabId) {
             // Hide all views
@@ -915,6 +1015,10 @@ html_content = """<!DOCTYPE html>
 
             // Scroll to top
             window.scrollTo({ top: 0, behavior: 'smooth' });
+
+            if (tabId === 'events') {
+                fetchAndRenderEvents();
+            }
         }
 
         // ---------------- APP STATE ----------------
@@ -988,6 +1092,7 @@ html_content = """<!DOCTYPE html>
                 "Home": "होम",
                 "Schemes": "योजनाएं",
                 "Applications": "आवेदन",
+                "NGO Events": "एनजीओ इवेंट्स",
                 "Profile": "प्रोफाइल",
                 "Chat Assistant": "चैट सहायक",
                 "Menu": "मेनू",
@@ -1032,6 +1137,7 @@ html_content = """<!DOCTYPE html>
                 "Home": "Home",
                 "Schemes": "Schemes",
                 "Applications": "Applications",
+                "NGO Events": "NGO Events",
                 "Profile": "Profile",
                 "Chat Assistant": "Chat Assistant",
                 "Menu": "Menu",
@@ -1156,6 +1262,7 @@ html_content = """<!DOCTYPE html>
             // Re-render NGO sections in selected language
             fetchAndRenderNGOs('dashboard-ngo-cards', 3);
             fetchAndRenderNGOs('explore-ngo-cards', 0);
+            fetchAndRenderEvents();
         }
 
         function toggleLanguage() {
@@ -1267,6 +1374,7 @@ html_content = """<!DOCTYPE html>
             fetchAndRenderSchemes(1);
             fetchAndRenderNGOs('dashboard-ngo-cards', 3);
             fetchAndRenderNGOs('explore-ngo-cards', 0);
+            fetchAndRenderEvents();
             captureTextNodes();
             applyPageLanguage();
             appendBotMessage(t('welcome'));
@@ -2077,6 +2185,7 @@ html_content = """<!DOCTYPE html>
                 });
                 fetchAndRenderNGOs('dashboard-ngo-cards', 3);
                 fetchAndRenderNGOs('explore-ngo-cards', 0);
+                fetchAndRenderEvents();
             } catch (_) {
                 showToast('Event creation failed.', 'error');
             }

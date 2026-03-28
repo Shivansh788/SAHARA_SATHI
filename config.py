@@ -1,5 +1,6 @@
 import os
 CONFIG_COEAI_API_KEY = "coeai-_9d5O7c-ei761wsqowkhmBNxPeaP-wIP"
+CONFIG_GEMINI_API_KEY = "AIzaSyBY1hXza4II8Xu_iEsV39w544KIl-v9kLU"
 
 def _env_bool(name: str, default: bool = False) -> bool:
     return os.environ.get(name, str(default)).strip().lower() in {"1", "true", "yes", "on"}
@@ -33,6 +34,9 @@ COEAI_MODEL = os.environ.get("COEAI_MODEL", "deepseek-r1:70b")
 COEAI_TIMEOUT_SEC = _env_int("COEAI_TIMEOUT_SEC", 120)
 COEAI_HEALTH_TIMEOUT_SEC = _env_int("COEAI_HEALTH_TIMEOUT_SEC", 10)
 UPESNET_CONNECTED_FLAG = _env_bool("UPESNET_CONNECTED", False)
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", CONFIG_GEMINI_API_KEY)
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+GEMINI_TIMEOUT_SEC = _env_float("GEMINI_TIMEOUT_SEC", 8.0)
 
 DATA_GOV_PROVIDER = os.environ.get("DATA_GOV_PROVIDER", "auto").strip().lower()
 DATA_GOV_API_KEY = os.environ.get("DATA_GOV_API_KEY", "")
@@ -45,7 +49,7 @@ OPENAI_TTS_VOICE = os.environ.get("OPENAI_TTS_VOICE", "alloy")
 OPENAI_TTS_MODEL = os.environ.get("OPENAI_TTS_MODEL", "tts-1")
 
 OLLAMA_CONNECT_TIMEOUT_SEC = _env_float("OLLAMA_CONNECT_TIMEOUT_SEC", 5.0)
-OLLAMA_READ_TIMEOUT_SEC = _env_float("OLLAMA_READ_TIMEOUT_SEC", 90.0)
+OLLAMA_READ_TIMEOUT_SEC = _env_float("OLLAMA_READ_TIMEOUT_SEC", 25.0)
 
 HF_HUB_DISABLE_SYMLINKS_WARNING = os.environ.get("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
 TOKENIZERS_PARALLELISM = os.environ.get("TOKENIZERS_PARALLELISM", "false")

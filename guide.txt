@@ -9,7 +9,7 @@ Quick Start (Single Line)
 -------------------------
 Run this from project root:
 
-python3 -m venv venv && source venv/bin/activate && pip install -U pip && pip install -r requirements.txt && python db_migrate.py && python app.py
+chmod +x bootstrap.sh run.sh && ./bootstrap.sh --run
 
 Open:
 http://localhost:8501
@@ -17,33 +17,40 @@ http://localhost:8501
 
 Deterministic Setup Steps
 -------------------------
-1) Create and activate environment
-    python3 -m venv venv
-    source venv/bin/activate
+1) One-time setup
+    chmod +x bootstrap.sh run.sh
+    ./bootstrap.sh
 
-2) Install dependencies
-    pip install -U pip
-    pip install -r requirements.txt
+2) Start app
+    ./run.sh
 
-3) Load data into SQLite
-    python db_migrate.py
-
-4) Start app
-    python app.py
-
-5) Health check
+3) Health check
     curl -s http://127.0.0.1:8501/api/health
+
+4) Stop app
+    Ctrl+C in the running terminal
+
+
+If setup is already done and you only want to rerun migration:
+    source venv/bin/activate
+    python db_migrate.py
 
 
 Configuration Rules
 -------------------
 - Use config.py as single source of truth for app settings.
-- Prefer env override only for secrets in deployment.
+- Use .env for local sharing and env override in production.
 - Core runtime values:
   - APP_HOST / APP_PORT
   - COEAI_API_KEY
+    - GEMINI_API_KEY
+    - OPENAI_API_KEY
   - SAHARA_TOKEN_SECRET
   - DATA_GOV_* values
+
+.env bootstrap:
+    cp .env.example .env
+    # edit .env and set only required keys
 
 
 Post-Setup Smoke Tests
@@ -62,18 +69,22 @@ Known Behavior
 --------------
 - Chat profile memory persists only explicit user-declared facts.
 - NGO events are loaded from data/ngo_events.csv into SQLite events.
-- If COEAI is unavailable, pipeline falls back safely.
+- If Gemini/COEAI are unavailable, pipeline falls back safely.
 
 
 Troubleshooting
 ---------------
 Port busy:
   pkill -f "python.*app.py"
-  python app.py
+    ./run.sh
 
 Import/module errors:
   source venv/bin/activate
   pip install -r requirements.txt
+
+Broken virtual environment (clean rebuild):
+    rm -rf venv
+    ./bootstrap.sh
 
 Rebuild DB data:
   python db_migrate.py

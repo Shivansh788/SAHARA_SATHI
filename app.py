@@ -469,8 +469,18 @@ def _extract_profile_facts(text: str) -> Dict[str, str]:
     if name_match:
         profile["name"] = name_match.group(1).strip().title()
 
+    # Also handle conversational pattern like: "I am Deepu age 10 ..."
+    if "name" not in profile:
+        alt_name_match = re.search(
+            r"\b(?:i am|i'm)\s+([a-zA-Z][a-zA-Z]{1,30})(?=\s+(?:age\b|and\b|from\b|,|\.|$))",
+            normalized,
+            re.IGNORECASE,
+        )
+        if alt_name_match:
+            profile["name"] = alt_name_match.group(1).strip().title()
+
     age_match = re.search(
-        r"\b(?:my age is|i am)\s*(\d{1,3})\s*(?:years|yrs|year|yo|years old)?\b",
+        r"\b(?:my age is|i am|age is|age)\s*(\d{1,3})\s*(?:years|yrs|year|yo|years old)?\b",
         normalized,
         re.IGNORECASE,
     )
@@ -480,7 +490,7 @@ def _extract_profile_facts(text: str) -> Dict[str, str]:
             profile["age"] = str(age_value)
 
     location_match = re.search(
-        r"\b(?:i am from|i live in|my location is|from)\s+([a-zA-Z][a-zA-Z\s]{1,60}?)(?=\b(?:my age is|my name is)\b|[,.!?]|$)",
+        r"\b(?:i am from|i live in|my location is|from|in)\s+([a-zA-Z][a-zA-Z\s]{1,60}?)(?=\b(?:my age is|my name is)\b|[,.!?]|$)",
         normalized,
         re.IGNORECASE,
     )
@@ -489,6 +499,16 @@ def _extract_profile_facts(text: str) -> Dict[str, str]:
         profile["location"] = location_value
         # If state not already provided, use location hint.
         profile.setdefault("state", location_value)
+
+    lowered = normalized.lower()
+    if any(token in lowered for token in ["student", "school", "college"]):
+        profile["occupation"] = "student"
+    elif "farmer" in lowered or "kisan" in lowered:
+        profile["occupation"] = "farmer"
+    elif "widow" in lowered:
+        profile["occupation"] = "widow"
+    elif "labour" in lowered or "worker" in lowered:
+        profile["occupation"] = "worker"
 
     return profile
 
@@ -573,12 +593,26 @@ async def ask_assistant(req: AskRequest, authorization: Optional[str] = Header(N
             )
 
         stored_facts = persistence.get_profile_facts(req.session_id, user_id=user_id)
-        intake_profile = intake.intake_agent_graph(req.query, req.session_id, stored_facts)
+        personal_fact_keys = {"name", "age", "location", "state", "category", "occupation"}
+
+        # If user explicitly shares personal facts in this turn, avoid mixing stale stored personal facts.
+        if explicit_facts:
+            stored_facts_for_response = {
+                k: v for k, v in stored_facts.items() if k not in personal_fact_keys
+            }
+            intake_existing_profile = {
+                k: v for k, v in stored_facts.items() if k not in {"state", "category", "age", "occupation"}
+            }
+        else:
+            stored_facts_for_response = stored_facts
+            intake_existing_profile = stored_facts
+
+        intake_profile = intake.intake_agent_graph(req.query, req.session_id, intake_existing_profile)
 
         profile_with_lang = {
             **intake_profile,
             **incoming_profile,
-            **stored_facts,
+            **stored_facts_for_response,
             **explicit_facts,
             "language": language_map.get(req.language.lower(), "English"),
         }

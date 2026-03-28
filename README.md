@@ -6,7 +6,35 @@ AI-powered welfare guidance platform with:
 - SQLite persistence (auth, bookmarks, chat history, profile facts, NGOs, events)
 - Optional COEAI support (UPESNET-gated)
 
-## 1) One-Command Local Setup (Linux/macOS)
+## 1) Fastest Setup For Sharing (Recommended)
+
+From project root:
+
+```bash
+chmod +x bootstrap.sh run.sh
+./bootstrap.sh
+./run.sh
+```
+
+Open:
+
+```text
+http://localhost:8501
+```
+
+What this does automatically:
+- Creates `venv`
+- Installs all dependencies from `requirements.txt`
+- Creates `.env` from `.env.example` if missing
+- Runs `db_migrate.py`
+
+Optional one-liner to setup and start immediately:
+
+```bash
+chmod +x bootstrap.sh run.sh && ./bootstrap.sh --run
+```
+
+## 2) Manual Setup (Linux/macOS)
 
 Run from project root:
 
@@ -20,7 +48,7 @@ Open:
 http://localhost:8501
 ```
 
-## 2) Windows Setup (PowerShell)
+## 3) Windows Setup (PowerShell)
 
 ```powershell
 python -m venv venv
@@ -31,15 +59,16 @@ python db_migrate.py
 python app.py
 ```
 
-## 3) Runtime Notes
+## 4) Runtime Notes
 
 - Default port: 8501
 - If port is busy, stop old process and rerun.
 - First boot may take longer due to model/index initialization.
+- If you do not configure Gemini/COEAI keys, the app still runs using fallback mode.
 
-## 4) Environment and Configuration
+## 5) Environment and Configuration
 
-All settings are centralized in [config.py](config.py).
+All settings are centralized in [config.py](config.py) and can be overridden via `.env`.
 
 Important keys:
 - COEAI_API_KEY
@@ -47,6 +76,15 @@ Important keys:
 - UPESNET_CONNECTED_FLAG
 - SAHARA_TOKEN_SECRET (via env override)
 - DATA_GOV_* (Data.gov integration settings)
+- GEMINI_API_KEY
+- OPENAI_API_KEY (only for OpenAI TTS)
+
+Quick env setup:
+
+```bash
+cp .env.example .env
+# edit .env and add only the keys you need
+```
 
 Recommended secure override pattern:
 
@@ -56,7 +94,7 @@ export COEAI_API_KEY="your-key-if-needed"
 python app.py
 ```
 
-## 5) Data and Migration
+## 6) Data and Migration
 
 Migration script loads:
 - Government schemes from data/Gov_schemes*.csv
@@ -69,7 +107,7 @@ Run migration anytime:
 python db_migrate.py
 ```
 
-## 6) Core API Endpoints
+## 7) Core API Endpoints
 
 - Health: GET /api/health
 - Ask assistant: POST /api/ask
@@ -79,17 +117,24 @@ python db_migrate.py
 - Events: GET/POST /api/events
 - Org flow: /api/org/register, /api/org/verify, /api/org/login, /api/org/me
 
-## 7) Memory Safety and Trust
+## 8) Memory Safety and Trust
 
 The assistant now stores only explicit user-declared personal facts (for example: "my age is 35") in DB profile memory.
 It does not infer personal age/name/location from random numbers or ambiguous text.
 
-## 8) Troubleshooting
+## 9) Troubleshooting
 
 Missing module:
 
 ```bash
 pip install -r requirements.txt
+```
+
+Fresh reinstall (safe reset of env only):
+
+```bash
+rm -rf venv
+./bootstrap.sh
 ```
 
 Port already in use:

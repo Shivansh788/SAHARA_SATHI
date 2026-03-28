@@ -5,6 +5,7 @@ from threading import Thread
 import re
 
 import config
+from rag_modules.checklist import get_checklist
 
 
 OLLAMA_CONNECT_TIMEOUT_SEC = config.OLLAMA_CONNECT_TIMEOUT_SEC
@@ -342,6 +343,8 @@ def generate(query, ranked_docs, profile, llm, local_pipeline=None, history=None
 
     citations = _build_citations(ranked_docs)
     context = "\n\n".join([doc.get("text", "") for doc in ranked_docs])
+    checklist_items = get_checklist(profile if isinstance(profile, dict) else {})
+    checklist_str = "\n".join(f"- {item}" for item in checklist_items)
 
     history_str = ""
     if history:
@@ -386,7 +389,8 @@ Critical response rules:
 2b. Never assume or invent Name/Age/Location. If any of these are not specified in Profile, do not claim them.
 2c. For age-sensitive recommendations, ask for age first if age is not specified.
 3. Mention eligibility clearly as who can apply and who cannot.
-4. Provide a practical document checklist.
+4. Documents required (use this verified list, do not invent others):
+{checklist_str}
 5. Give step-by-step application flow (where, when, how).
 6. Include deadline awareness (if date unavailable, explicitly say user must verify latest deadline on official portal).
 7. If user is not eligible, suggest nearest alternatives from context. Never leave user at dead end.

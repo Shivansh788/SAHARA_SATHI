@@ -41,6 +41,8 @@ DATA_GOV_BASE_URL = os.environ.get("DATA_GOV_BASE_URL", "https://api.data.gov.in
 DATA_GOV_RAPIDAPI_BASE_URL = os.environ.get("DATA_GOV_RAPIDAPI_BASE_URL", "https://data-gov-in.p.rapidapi.com")
 DATA_GOV_RAPIDAPI_HOST = os.environ.get("DATA_GOV_RAPIDAPI_HOST", "data-gov-in.p.rapidapi.com")
 DATA_GOV_TIMEOUT_SEC = _env_float("DATA_GOV_TIMEOUT_SEC", 8.0)
+OPENAI_TTS_VOICE = os.environ.get("OPENAI_TTS_VOICE", "alloy")
+OPENAI_TTS_MODEL = os.environ.get("OPENAI_TTS_MODEL", "tts-1")
 
 OLLAMA_CONNECT_TIMEOUT_SEC = _env_float("OLLAMA_CONNECT_TIMEOUT_SEC", 5.0)
 OLLAMA_READ_TIMEOUT_SEC = _env_float("OLLAMA_READ_TIMEOUT_SEC", 90.0)

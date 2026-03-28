@@ -261,7 +261,7 @@ html_content = """<!DOCTYPE html>
         <div class="flex items-center gap-4">
             <button id="lang-toggle" onclick="toggleLanguage()" class="px-3 py-1.5 bg-primary-fixed text-on-primary-fixed rounded-lg text-xs font-bold flex items-center gap-1.5 hover:bg-blue-100 transition-all font-['Plus_Jakarta_Sans'] hidden md:flex">
                 <span class="material-symbols-outlined text-sm">translate</span>
-                <span id="lang-label">English</span>
+                <span id="lang-label">English | हिंदी</span>
             </button>
             <button class="p-2 hover:bg-slate-100 rounded-full transition-colors hidden md:block" onclick="switchTab('schemes')">
                 <span class="material-symbols-outlined text-on-surface-variant">search</span>
@@ -550,13 +550,13 @@ html_content = """<!DOCTYPE html>
                     <!-- Chat Input -->
                     <div class="p-6 bg-white border-t border-slate-100 shadow-[0_-10px_40px_rgba(0,0,0,0.03)] focus-within:bg-blue-50/30 transition-colors">
                         <div class="relative flex items-center gap-4">
-                            <button id="voice-input-btn" onclick="startVoiceInput()" class="w-12 h-12 rounded-full border border-slate-200 text-slate-400 hover:text-primary hover:bg-slate-50 flex items-center justify-center transition-all" title="Start voice input">
+                            <button id="voice-input-btn" onclick="startVoiceInput()" class="w-12 h-12 rounded-full border border-slate-200 text-slate-400 hover:text-primary hover:bg-slate-50 flex items-center justify-center transition-all" title="बोलें">
                                 <span class="material-symbols-outlined">mic</span>
                             </button>
                             <button id="speak-last-btn" onclick="speakLastAnswer()" class="w-12 h-12 rounded-full border border-slate-200 text-slate-400 hover:text-primary hover:bg-slate-50 flex items-center justify-center transition-all" title="Listen to last answer">
                                 <span class="material-symbols-outlined">volume_up</span>
                             </button>
-                            <input id="actualChatInput" class="chat-input-field flex-1 h-14 pl-6 pr-16 bg-white rounded-2xl border border-slate-200 outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10 text-base shadow-sm font-label transition-all" placeholder="Describe your situation in Hindi, English, or Hinglish..." type="text" onkeypress="if(event.key === 'Enter') { triggerRAGAPI(this.value); this.value=''; }"/>
+                            <input id="actualChatInput" class="chat-input-field flex-1 h-14 pl-6 pr-16 bg-white rounded-2xl border border-slate-200 outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10 text-base shadow-sm font-label transition-all" placeholder="यहाँ अपना सवाल लिखें..." type="text" onkeypress="if(event.key === 'Enter') { triggerRAGAPI(this.value); this.value=''; }"/>
                             <select id="chat-mode-select" class="h-14 px-3 rounded-xl border border-slate-200 text-sm font-semibold text-slate-700 bg-white" onchange="window.currentMode = this.value">
                                 <option value="citizen">Citizen</option>
                                 <option value="worker">Worker</option>
@@ -568,7 +568,7 @@ html_content = """<!DOCTYPE html>
                         </div>
                         <div class="flex justify-center mt-4 text-xs text-slate-400 gap-6">
                             <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">lock</span> Encrypted specific to your profile</span>
-                            <span class="flex items-center gap-1 cursor-pointer hover:text-primary"><span class="material-symbols-outlined text-[14px]">mic</span> English / Hindi Voice input</span>
+                            <span class="flex items-center gap-1 cursor-pointer hover:text-primary"><span class="material-symbols-outlined text-[14px]">mic</span> English / हिंदी Voice input</span>
                         </div>
                     </div>
                 </div>
@@ -964,7 +964,7 @@ html_content = """<!DOCTYPE html>
                 schemeLoadError: "योजनाएं लोड नहीं हो सकीं। कृपया सर्वर चल रहा है या नहीं, जांचें।",
                 askError: "माफ कीजिए, एक त्रुटि आई। कृपया दोबारा प्रयास करें।",
                 connectionError: "कनेक्शन त्रुटि। कृपया सुनिश्चित करें कि सर्वर चल रहा है।",
-                startVoice: "वॉइस इनपुट शुरू करें",
+                startVoice: "बोलें",
                 stopVoice: "रिकॉर्डिंग रोकें",
                 fillFields: "कृपया सभी फील्ड भरें",
                 noAnswerToSpeak: "सुनाने के लिए अभी कोई उत्तर नहीं है।"
@@ -1026,7 +1026,7 @@ html_content = """<!DOCTYPE html>
                 ,"Status": "स्थिति"
                 ,"Verified Citizen": "सत्यापित नागरिक"
                 ,"Search for schemes, services, or eligibility...": "योजनाएं, सेवाएं या पात्रता खोजें..."
-                ,"Describe your situation in Hindi, English, or Hinglish...": "अपनी स्थिति हिंदी, अंग्रेज़ी या हिंग्लिश में लिखें..."
+                ,"यहाँ अपना सवाल लिखें...": "यहाँ अपना सवाल लिखें..."
             },
             hinglish: {
                 "Home": "Home",
@@ -1070,7 +1070,7 @@ html_content = """<!DOCTYPE html>
                 ,"Status": "Status"
                 ,"Verified Citizen": "Verified Citizen"
                 ,"Search for schemes, services, or eligibility...": "Schemes, services ya eligibility search karo..."
-                ,"Describe your situation in Hindi, English, or Hinglish...": "Apni situation Hindi, English ya Hinglish me batao..."
+                ,"यहाँ अपना सवाल लिखें...": "Yahan apna sawaal likho..."
             }
         };
 
@@ -1140,7 +1140,7 @@ html_content = """<!DOCTYPE html>
 
             const langLabel = document.getElementById('lang-label');
             if (langLabel) {
-                langLabel.textContent = window.currentLanguage === 'english' ? 'English' : window.currentLanguage === 'hindi' ? 'हिन्दी' : 'Hinglish';
+                langLabel.textContent = window.currentLanguage === 'english' ? 'English | हिंदी' : window.currentLanguage === 'hindi' ? 'हिंदी' : 'Hinglish | हिंदी';
             }
 
             const menuLabel = document.getElementById('side-menu-label');

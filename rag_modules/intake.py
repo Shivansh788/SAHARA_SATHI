@@ -1,5 +1,7 @@
 import re
 
+from rag_modules.intake_graph import run_intake_graph
+
 
 STATE_HINTS = [
     "rajasthan",
@@ -92,3 +94,7 @@ def intake_agent(query):
     profile["follow_up_questions"] = questions[:4]
 
     return profile
+
+
+def intake_agent_graph(query, session_id, existing_profile=None):
+    return run_intake_graph(query, session_id, existing_profile)

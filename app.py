@@ -22,6 +22,10 @@ from rag_modules import retrieval, reranker, synthesis, fusion, intake
 from sentence_transformers import SentenceTransformer, CrossEncoder
 from gtts import gTTS
 import whisper
+try:
+    from openai import OpenAI
+except Exception:
+    OpenAI = None
 from knowledge_graph import build_graph_data, filter_graph
 import persistence
 import config
@@ -556,7 +560,6 @@ async def ask_assistant(req: AskRequest, authorization: Optional[str] = Header(N
             "english": "English",
         }
 
-        intake_profile = intake.intake_agent(req.query)
         incoming_profile = req.profile if isinstance(req.profile, dict) else {}
 
         # Persist only explicit facts from the current user message.
@@ -570,6 +573,7 @@ async def ask_assistant(req: AskRequest, authorization: Optional[str] = Header(N
             )
 
         stored_facts = persistence.get_profile_facts(req.session_id, user_id=user_id)
+        intake_profile = intake.intake_agent_graph(req.query, req.session_id, stored_facts)
 
         profile_with_lang = {
             **intake_profile,
@@ -632,7 +636,7 @@ async def speech_to_text(audio: UploadFile = File(...), language: str = "english
             temp_audio.write(await audio.read())
             temp_path = temp_audio.name
 
-        whisper_lang = {"english": "en", "hindi": "hi", "hinglish": "en"}.get(language.lower())
+        whisper_lang = {"english": "en", "hindi": "hi", "hinglish": "hi"}.get(language.lower())
 
         # Decode with explicit ffmpeg binary so Whisper does not rely on PATH lookup for "ffmpeg".
         waveform = _decode_audio_with_ffmpeg(temp_path, ffmpeg_path)
@@ -663,6 +667,39 @@ async def text_to_speech(req: TTSRequest):
             "hindi": "hi",
             "hinglish": "en"
         }.get(req.language.lower(), "en")
+
+        # First try OpenAI TTS (when configured), then fall back to local options.
+        openai_api_key = getattr(config, "OPENAI_API_KEY", "")
+        if openai_api_key and OpenAI is not None:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as temp_audio_file:
+                temp_audio_path = temp_audio_file.name
+            try:
+                client = OpenAI(api_key=openai_api_key)
+                response = client.audio.speech.create(
+                    model=config.OPENAI_TTS_MODEL,
+                    voice=config.OPENAI_TTS_VOICE,
+                    input=req.text,
+                )
+
+                if hasattr(response, "stream_to_file"):
+                    response.stream_to_file(temp_audio_path)
+                else:
+                    content = getattr(response, "content", None)
+                    if not isinstance(content, (bytes, bytearray)) and hasattr(response, "read"):
+                        content = response.read()
+                    if not isinstance(content, (bytes, bytearray)):
+                        raise RuntimeError("OpenAI TTS response did not contain binary audio content")
+                    with open(temp_audio_path, "wb") as f:
+                        f.write(content)
+
+                with open(temp_audio_path, "rb") as f:
+                    encoded = base64.b64encode(f.read()).decode("utf-8")
+                return {"audio_base64": encoded, "audio_mime": "audio/mpeg"}
+            except Exception as openai_tts_error:
+                print(f"OpenAI TTS failed, falling back to offline TTS: {openai_tts_error}")
+            finally:
+                if os.path.exists(temp_audio_path):
+                    os.remove(temp_audio_path)
 
         # Prefer offline TTS if available.
         if pyttsx3 is not None:

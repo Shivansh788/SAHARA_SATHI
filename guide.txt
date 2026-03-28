@@ -1,54 +1,80 @@
-Sahara Saathi Project Guide
-===========================
+SAHARA Saathi - Agent-Friendly Setup Guide
+==========================================
 
-This guide provides step-by-step instructions to install and run the Sahara Saathi AI Welfare Dashboard without errors.
+Purpose
+-------
+This runbook is designed so another engineer/agent can set up and verify the project quickly with deterministic commands.
 
-Table of Contents:
-1. Prerequisites
-2. Installation
-3. Running the Application
-4. Fallback Modes (How it works offline)
-5. Troubleshooting
+Quick Start (Single Line)
+-------------------------
+Run this from project root:
 
-1. Prerequisites
-----------------
-- Python 3.10 or higher
-- Ollama (Optional, for local AI fallback)
-- Internet connection (First time only, for downloading embeddings)
+python3 -m venv venv && source venv/bin/activate && pip install -U pip && pip install -r requirements.txt && python db_migrate.py && python app.py
 
-2. Installation
----------------
-Step A: Clone or Navigate to the project directory
-Step B: Create a virtual environment
-    python -m venv venv
-Step C: Activate the virtual environment
-    Linux/Mac: source venv/bin/activate
-    Windows: venv\Scripts\activate
-Step D: Install all dependencies
+Open:
+http://localhost:8501
+
+
+Deterministic Setup Steps
+-------------------------
+1) Create and activate environment
+    python3 -m venv venv
+    source venv/bin/activate
+
+2) Install dependencies
+    pip install -U pip
     pip install -r requirements.txt
 
-3. Running the Application
---------------------------
-To start the dashboard, run:
+3) Load data into SQLite
+    python db_migrate.py
+
+4) Start app
     python app.py
 
-Once started, open your browser at:
-    http://localhost:8501
+5) Health check
+    curl -s http://127.0.0.1:8501/api/health
 
-4. Fallback Modes (Offline Support)
------------------------------------
-This project is designed to work even without the main college network (UPESNET).
 
-Tier 1 (Online - UPESNET): USES coeai (DeepSeek-R1 70B) for high-quality answers.
-Tier 2 (Home - Local AI): Uses Ollama with llama3.1. 
-    - To use this, ensure Ollama is installed and run: ollama run llama3.1
-Tier 3 (Restricted Offline): If both above fail, the system will directly show you the most relevant document snippets (text-snapshots) from the Sahara database.
+Configuration Rules
+-------------------
+- Use config.py as single source of truth for app settings.
+- Prefer env override only for secrets in deployment.
+- Core runtime values:
+  - APP_HOST / APP_PORT
+  - COEAI_API_KEY
+  - SAHARA_TOKEN_SECRET
+  - DATA_GOV_* values
 
-5. Troubleshooting
-------------------
-- "Address already in use": This means another instance is running on port 8501. Kill it before starting again.
-- "ModuleNotFoundError": Ensure you have activated your venv and run `pip install -r requirements.txt`.
-- CSS/UI Looks Weird: Ensure you have an internet connection to load the Tailwind CDN scripts.
 
-===========================
-Sahara Saathi - Empathetic Welfare Guidance
+Post-Setup Smoke Tests
+----------------------
+1) Ask endpoint
+    curl -sS -X POST http://127.0.0.1:8501/api/ask -H "Content-Type: application/json" -d '{"query":"pm kisan eligibility","session_id":"smoke1","language":"english","mode":"citizen"}'
+
+2) Events endpoint
+    curl -s http://127.0.0.1:8501/api/events
+
+3) NGOs endpoint
+    curl -s "http://127.0.0.1:8501/api/ngos?location=dehradun"
+
+
+Known Behavior
+--------------
+- Chat profile memory persists only explicit user-declared facts.
+- NGO events are loaded from data/ngo_events.csv into SQLite events.
+- If COEAI is unavailable, pipeline falls back safely.
+
+
+Troubleshooting
+---------------
+Port busy:
+  pkill -f "python.*app.py"
+  python app.py
+
+Import/module errors:
+  source venv/bin/activate
+  pip install -r requirements.txt
+
+Rebuild DB data:
+  python db_migrate.py
+

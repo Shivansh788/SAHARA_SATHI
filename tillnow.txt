@@ -1,181 +1,84 @@
-SAHARA SAATHI - TILL NOW STATUS
-Date: 2026-03-27
+SAHARA SAATHI - CURRENT STATUS
+Date: 2026-03-28
 
-This file summarizes everything implemented in this upgrade pass in a human-friendly way.
+Purpose
+-------
+This file is a quick handoff status for engineers/agents to understand what is complete and how to run safely.
 
-FREE-FIRST UPDATE (latest)
-- LLM pipeline is now free-first: local Ollama is primary generation path.
-- Optional external paid provider (COEAI) is only fallback when explicitly configured.
-- Main app no longer blocks when paid key is missing.
-- Added optional offline TTS support using pyttsx3; fallback to gTTS remains.
-- Removed mandatory coeai dependency from requirements.
 
-SMALL FIX BATCH (latest)
-- Frontend login/signup now calls backend auth APIs instead of only local UI simulation.
-- Chat mode selector added in UI (Citizen/Worker/Explorer) and mode is sent to /api/ask.
-- Added /api/health endpoint for quick runtime checks.
-- Org register endpoint no longer exposes OTP by default; OTP hint is only shown when SAHARA_DEV_OTP_HINT=true.
+Major Completed Work
+--------------------
+1) Retrieval and synthesis pipeline
+- Hybrid retrieval: BM25 + FAISS + RRF + reranker.
+- Knowledge graph hints integrated in /api/ask.
+- Structured synthesis with citations, follow-up prompts, and mode support.
 
-SMALL FIX BATCH 2 (latest)
-- Added profile data binding from authenticated user details (name/identifier/state/category).
-- Added in-app toast notifications and replaced blocking alert popups for auth and UX messages.
-- Added scheme bookmark save action from scheme cards and profile-side bookmark listing/removal UI.
-- Added OTP expiry + attempt tracking in persistence layer.
-- Added org OTP resend endpoint: POST /api/org/resend-otp.
-- Org verification now returns detailed reason payload (invalid/expired/attempts/suspended).
-- Startup now warns when SAHARA_TOKEN_SECRET is left at default.
+2) Auth and persistence
+- SQLite-backed users, orgs, events, bookmarks, chat messages.
+- User signup/login/me + bookmark APIs completed.
+- Organization register/verify/login + admin event creation completed.
 
-==================================================
-1) Retrieval Quality Upgrades (Implemented)
-==================================================
-- Converted raw RAG documents into structured records with metadata.
-  Includes source type, source name, category, eligibility, and searchable text.
-- Added versioned RAG cache handling in rag_data.pkl.
-- Updated embedding preparation to use clean text fields.
-- Implemented proper Reciprocal Rank Fusion (RRF) with configurable scoring.
-  Flow now supports larger candidate set (top-50) before final selection.
-- Implemented cross-encoder reranking support.
-  Uses: cross-encoder/ms-marco-MiniLM-L-6-v2 when available.
-  Falls back safely to lexical heuristic if model loading fails.
+3) NGO events integration
+- data/ngo_events.csv is now migrated into SQLite events table.
+- /api/ngos merges active event data for user discovery.
 
-Files changed:
-- data_loader.py
-- rag_modules/retrieval.py
-- rag_modules/fusion.py
-- rag_modules/reranker.py
+4) Profile-memory safety fix (critical)
+- Added dedicated profile_facts table.
+- Only explicit user-declared facts are stored and reused.
+- Prevented false personal claims like random "you are 10 years old".
 
-==================================================
-2) Intake + Personalization (Implemented)
-==================================================
-- Intake agent now extracts:
-  - intent
-  - language hints
-  - state
-  - category
-  - age
-  - occupation
-- Added dynamic follow-up question generation (up to 4) when profile is incomplete.
+5) Config centralization
+- Runtime settings and keys are centralized in config.py.
+- Docs updated to avoid exposing secrets in markdown.
 
-File changed:
-- rag_modules/intake.py
 
-==================================================
-3) Synthesis Improvements (Implemented)
-==================================================
-- Synthesis now works with ranked structured docs.
-- Added citations payload generation from retrieved sources.
-- Added mode-aware output support (citizen/worker).
-- Added worker summary block (WhatsApp-ready style text).
-- Added understanding confirmation question at end of response.
-- Kept robust fallback behavior (LLM -> Ollama -> context-only response).
+Current Database Coverage
+-------------------------
+- Government schemes: loaded via data/Gov_schemes*.csv
+- NGOs: loaded via data/ngo_data.csv
+- NGO events: loaded via data/ngo_events.csv
+- Chat memory: chat_messages table
+- Explicit profile memory: profile_facts table
 
-File changed:
-- rag_modules/synthesis.py
 
-==================================================
-4) Ask Pipeline Refactor in Main App (Implemented)
-==================================================
-- /api/ask now does:
-  1. Dense retrieval (top-50)
-  2. BM25 retrieval (top-50)
-  3. RRF fusion
-  4. Knowledge-graph hint injection
-  5. Cross-encoder reranking (top-5)
-  6. Mode-aware synthesis response with citations and follow-ups
-- Added LLM-not-configured safe response if COEAI_API_KEY is missing.
-- Removed hard dependency on hardcoded API key.
+One-Click Local Run
+-------------------
+python3 -m venv venv && source venv/bin/activate && pip install -U pip && pip install -r requirements.txt && python db_migrate.py && python app.py
 
-File changed:
-- app.py
+Open: http://localhost:8501
 
-==================================================
-5) Auth + Persistence + Bookmarks (Implemented)
-==================================================
-- Added SQLite-backed persistence layer.
-- Implemented user signup/login.
-- Added token creation + token verification.
-- Added authenticated profile endpoint.
-- Added bookmarks create/list/delete endpoints.
 
-New file:
-- persistence.py
+Fast Verification Commands
+--------------------------
+1) Health
+   curl -s http://127.0.0.1:8501/api/health
 
-New endpoints:
-- POST /api/auth/signup
-- POST /api/auth/login
-- GET /api/auth/me
-- GET /api/bookmarks
-- POST /api/bookmarks
-- DELETE /api/bookmarks/{bookmark_id}
+2) Events loaded
+   curl -s http://127.0.0.1:8501/api/events
 
-==================================================
-6) Verified Org + Community Events Workflow (Implemented)
-==================================================
-- Added organization registration endpoint.
-- Added OTP verification flow.
-- Added event creation for verified orgs only.
-- Added event listing endpoint.
-- Added report endpoint with auto-suspension rule:
-  If reports >= 3 -> org suspended + events suspended.
+3) Ask smoke test
+   curl -sS -X POST http://127.0.0.1:8501/api/ask -H "Content-Type: application/json" -d '{"query":"pm kisan eligibility","session_id":"smoke1","language":"english","mode":"citizen"}'
 
-New endpoints:
-- POST /api/org/register
-- POST /api/org/verify
-- POST /api/events
-- GET /api/events
-- POST /api/events/{event_id}/report
 
-Extra integration:
-- /api/ngos now merges active verified events into NGO/community results.
+Important Implementation Rules
+------------------------------
+- Do not infer personal profile facts from ambiguous text.
+- Persist only explicit statements like:
+  - "my age is 35"
+  - "my name is Ramesh"
+  - "i am from Jaipur"
+- Keep config.py as source of truth for runtime toggles.
 
-==================================================
-7) Knowledge Graph Usage (Implemented)
-==================================================
-- Existing graph build and graph API retained.
-- Ask pipeline now injects graph-derived hint docs for better contextual grounding.
 
-==================================================
-8) Frontend Compatibility Enhancements (Implemented)
-==================================================
-- Existing chat remains compatible.
-- Frontend now also renders (when present):
-  - citations
-  - follow-up questions
-  - worker summary
-  - understanding confirmation prompt
+If Something Breaks
+-------------------
+1) Reinstall deps
+   source venv/bin/activate
+   pip install -r requirements.txt
 
-File changed:
-- frontend_html.py
+2) Rebuild DB data
+   python db_migrate.py
 
-==================================================
-9) Legacy API Entry Alignment (Implemented)
-==================================================
-- Updated api.py to match new retrieval and synthesis signatures.
-- Removed hardcoded key behavior in favor of environment variable.
-
-File changed:
-- api.py
-
-==================================================
-10) Validation Status (Completed)
-==================================================
-- Static diagnostics: No editor errors in changed files.
-- Python compile check passed:
-  python -m py_compile app.py api.py data_loader.py persistence.py knowledge_graph.py rag_modules/*.py
-
-==================================================
-11) Environment Variables To Set
-==================================================
-Recommended for full functionality:
-- COEAI_API_KEY=<your_key>
-- SAHARA_TOKEN_SECRET=<strong_random_secret>
-Optional:
-- SAHARA_DB_PATH=sahara.db
-
-==================================================
-12) Notes
-==================================================
-- This implementation keeps backward compatibility for current UI behavior.
-- If cross-encoder model download is unavailable at runtime, reranking fallback is automatic.
-- OTP in org registration is returned as otp_hint in API response (development mode behavior).
-  In production, this should be sent via email/SMS and removed from responses.
+3) Restart backend
+   pkill -f "python.*app.py"
+   python app.py

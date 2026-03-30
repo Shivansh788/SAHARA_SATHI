@@ -133,9 +133,11 @@ def init_db() -> None:
         _ensure_column(conn, "organizations", "otp_expires_at", "INTEGER DEFAULT 0")
         _ensure_column(conn, "organizations", "otp_attempts", "INTEGER DEFAULT 0")
         _ensure_column(conn, "organizations", "password_hash", "TEXT DEFAULT ''")
+        _ensure_column(conn, "users", "email", "TEXT DEFAULT ''")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_chat_messages_session_created ON chat_messages(session_id, created_at)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_profile_facts_user_key ON profile_facts(user_id, fact_key)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_profile_facts_session_key ON profile_facts(session_id, fact_key)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)")
 
 
 def _hash_password(password: str, salt: Optional[str] = None) -> str:
@@ -202,14 +204,14 @@ def verify_token(token: str) -> Optional[Dict[str, Any]]:
     return payload
 
 
-def create_user(full_name: str, identifier: str, password: str, state: str = "", category: str = "") -> int:
+def create_user(full_name: str, identifier: str, password: str, state: str = "", category: str = "", email: str = "") -> int:
     with _conn() as conn:
         cur = conn.execute(
             """
-            INSERT INTO users (full_name, identifier, state, category, password_hash, created_at)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO users (full_name, identifier, email, state, category, password_hash, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
-            (full_name, identifier, state, category, _hash_password(password), int(time.time())),
+            (full_name, identifier, email or identifier, state, category, _hash_password(password), int(time.time())),
         )
         return int(cur.lastrowid)
 
@@ -217,6 +219,15 @@ def create_user(full_name: str, identifier: str, password: str, state: str = "",
 def get_user_by_identifier(identifier: str) -> Optional[sqlite3.Row]:
     with _conn() as conn:
         return conn.execute("SELECT * FROM users WHERE identifier = ?", (identifier,)).fetchone()
+
+
+def get_user_by_email(email: str) -> Optional[sqlite3.Row]:
+    """Return the most recently created user with this email."""
+    with _conn() as conn:
+        return conn.execute(
+            "SELECT * FROM users WHERE email = ? ORDER BY created_at DESC LIMIT 1",
+            (email,)
+        ).fetchone()
 
 
 def get_user_by_id(user_id: int) -> Optional[sqlite3.Row]:

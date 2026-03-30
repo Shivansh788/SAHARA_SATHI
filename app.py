@@ -387,14 +387,14 @@ class TTSRequest(BaseModel):
 
 class SignupRequest(BaseModel):
     full_name: str
-    identifier: str
+    email: str
     password: str
     state: str = ""
     category: str = ""
 
 
 class LoginRequest(BaseModel):
-    identifier: str
+    email: str
     password: str
 
 
@@ -761,47 +761,78 @@ async def text_to_speech(req: TTSRequest):
         return {"audio_base64": "", "audio_mime": ""}
 
 @app.get("/api/schemes")
-async def get_schemes(page: int = 1, limit: int = 50):
+async def get_schemes(page: int = 1, limit: int = 10, state: str = "", category: str = ""):
     try:
         all_schemes = RAG_DATA.get("all_schemes", [])
-        start = (page - 1) * limit
-        end = start + limit
-        paginated = all_schemes[start:end]
-        
-        # Add links (Mapping some common ones, rest use fallback search)
+
+        # Filter by state — match schemes where level == 'Central' (available everywhere)
+        # or the state name appears in eligibility/tags/combined text.
+        if state:
+            state_lower = state.lower()
+            filtered = []
+            for s in all_schemes:
+                level = (s.get("level") or "").lower()
+                combined = (s.get("combined") or "").lower()
+                eligibility = (s.get("eligibility") or "").lower()
+                tags = (s.get("tags") or "").lower()
+                # Include central schemes + any scheme mentioning the state
+                if level in ("central", "national") or state_lower in combined or state_lower in eligibility or state_lower in tags:
+                    filtered.append(s)
+            # If the state filter is too restrictive (< 5 results), fall back to central schemes only
+            if len(filtered) < 5:
+                filtered = [s for s in all_schemes if (s.get("level") or "").lower() in ("central", "national")] or all_schemes
+        else:
+            filtered = all_schemes
+
+        # Filter by category
+        if category:
+            cat_lower = category.lower()
+            cat_filtered = [s for s in filtered if cat_lower in (s.get("category") or "").lower() or cat_lower in (s.get("tags") or "").lower() or cat_lower in (s.get("combined") or "").lower()]
+            if len(cat_filtered) >= 5:
+                filtered = cat_filtered
+
+        # Paginate
+        clamp_limit = min(max(limit, 1), 50)
+        start = (page - 1) * clamp_limit
+        end = start + clamp_limit
+        paginated = filtered[start:end]
+
+        # Enrich with apply URLs
         links = {
             "PM-Kisan Samman Nidhi": "https://pmkisan.gov.in/",
             "Indira Mahila Shakti Udyam Protsahan Yojana": "https://imshakti.rajasthan.gov.in/",
             "Mukhyamantri Shramik Aujaar Sahayata Yojana": "https://labour.rajasthan.gov.in/",
             "PM Awas Yojana": "https://pmay-urban.gov.in/",
-            # Fallback will be constructed in frontend or here
         }
-        
         enriched = []
         for s in paginated:
-            name = s.get('scheme_name', '')
-            s['apply_url'] = links.get(name, f"https://www.myscheme.gov.in/search?q={name.replace(' ', '+')}")
+            name = s.get("scheme_name", "")
+            s["apply_url"] = links.get(name, f"https://www.myscheme.gov.in/search?q={name.replace(' ', '+')}")
             enriched.append(s)
-            
+
         return {
             "schemes": enriched,
-            "total": len(all_schemes),
+            "total": len(filtered),
             "page": page,
-            "limit": limit
+            "limit": clamp_limit
         }
     except Exception as e:
         print(f"Error in /api/schemes: {e}")
         return {"schemes": [], "total": 0}
 
 @app.get("/api/ngos")
-async def get_ngos(category: str = "", location: str = ""):
+async def get_ngos(category: str = "", location: str = "", limit: int = 10):
     try:
         all_ngos = RAG_DATA.get("all_ngos", [])
         filtered = all_ngos
         if category:
             filtered = [n for n in filtered if category.lower() in n.get("category", "").lower()]
         if location:
-            filtered = [n for n in filtered if location.lower() in n.get("location", "").lower()]
+            location_lower = location.lower()
+            loc_filtered = [n for n in filtered if location_lower in n.get("location", "").lower()]
+            # Only apply location filter if it gives results; otherwise keep unfiltered
+            if loc_filtered:
+                filtered = loc_filtered
 
         events = persistence.list_events(category=category, location=location)
         event_as_ngos = [
@@ -818,6 +849,9 @@ async def get_ngos(category: str = "", location: str = ""):
         ]
 
         merged = filtered + event_as_ngos
+        # Apply limit (0 = no limit)
+        if limit > 0:
+            merged = merged[:limit]
         return {"ngos": merged, "total": len(merged)}
     except Exception as e:
         print(f"Error in /api/ngos: {e}")
@@ -826,17 +860,22 @@ async def get_ngos(category: str = "", location: str = ""):
 
 @app.post("/api/auth/signup")
 async def signup(req: SignupRequest):
+    import time as _time
     try:
-        existing = persistence.get_user_by_identifier(req.identifier)
-        if existing:
-            return {"ok": False, "message": "User already exists"}
-
+        # Validate email format minimally
+        if not req.email or '@' not in req.email:
+            return {"ok": False, "message": "Please enter a valid email address"}
+        if not req.password or len(req.password) < 8:
+            return {"ok": False, "message": "Password must be at least 8 characters"}
+        # Make identifier unique: email + timestamp so same email can register multiple times
+        unique_identifier = f"{req.email.strip().lower()}_{int(_time.time())}"
         user_id = persistence.create_user(
             full_name=req.full_name,
-            identifier=req.identifier,
+            identifier=unique_identifier,
             password=req.password,
             state=req.state,
             category=req.category,
+            email=req.email.strip().lower(),
         )
         token = persistence.create_token(user_id)
         return {"ok": True, "token": token, "user_id": user_id}
@@ -846,12 +885,12 @@ async def signup(req: SignupRequest):
 
 @app.post("/api/auth/login")
 async def login(req: LoginRequest):
-    user = persistence.get_user_by_identifier(req.identifier)
+    user = persistence.get_user_by_email(req.email.strip().lower())
     if not user:
-        return {"ok": False, "message": "Invalid credentials"}
+        return {"ok": False, "message": "No account found with this email"}
 
     if not persistence.verify_password(req.password, user["password_hash"]):
-        return {"ok": False, "message": "Invalid credentials"}
+        return {"ok": False, "message": "Incorrect password"}
 
     token = persistence.create_token(int(user["id"]))
     return {
@@ -860,6 +899,7 @@ async def login(req: LoginRequest):
         "user": {
             "id": user["id"],
             "full_name": user["full_name"],
+            "email": user["email"],
             "identifier": user["identifier"],
             "state": user["state"],
             "category": user["category"],
@@ -877,6 +917,7 @@ async def me(authorization: Optional[str] = Header(default=None)):
         "user": {
             "id": user["id"],
             "full_name": user["full_name"],
+            "email": user.get("email", ""),
             "identifier": user["identifier"],
             "state": user["state"],
             "category": user["category"],
@@ -1011,6 +1052,17 @@ async def create_event(req: EventCreateRequest, authorization: Optional[str] = H
     )
     if not event_id:
         return {"ok": False, "message": "Organization is not verified or invalid."}
+
+    # Also persist to ngo_events.csv
+    _append_event_to_csv(dict(org), {
+        "title": req.title,
+        "description": req.description,
+        "category": req.category,
+        "location": req.location,
+        "start_date": req.start_date,
+        "end_date": req.end_date,
+    })
+
     return {"ok": True, "event_id": event_id}
 
 
@@ -1023,6 +1075,101 @@ async def list_events(category: str = "", location: str = ""):
 @app.post("/api/events/{event_id}/report")
 async def report_event(event_id: int):
     return persistence.report_event(event_id)
+
+
+# ── CSV helper functions ────────────────────────────────────────────────
+def _append_ngo_to_csv(org: Dict[str, Any]) -> bool:
+    """Append organization details to ngo_data.csv if not already present."""
+    import csv, os
+    csv_path = os.path.join(os.path.dirname(__file__), "data", "ngo_data.csv")
+    try:
+        # Check if org already exists in CSV
+        if os.path.exists(csv_path):
+            with open(csv_path, "r", newline="", encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    if row.get("name", "").strip().lower() == str(org.get("name", "")).strip().lower():
+                        return False  # already present
+
+        # Append the org
+        write_header = not os.path.exists(csv_path) or os.path.getsize(csv_path) == 0
+        with open(csv_path, "a", newline="", encoding="utf-8") as f:
+            fieldnames = ["name", "type", "category", "description", "location", "eligibility"]
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            if write_header:
+                writer.writeheader()
+            writer.writerow({
+                "name": org.get("name", ""),
+                "type": "organization",
+                "category": org.get("category", "Community"),
+                "description": org.get("description", ""),
+                "location": org.get("location", ""),
+                "eligibility": "Open to all",
+            })
+        return True
+    except Exception as e:
+        print(f"Warning: Could not append to ngo_data.csv: {e}")
+        return False
+
+
+def _append_event_to_csv(org: Dict[str, Any], event: Dict[str, Any]) -> bool:
+    """Append a new event to ngo_data.csv."""
+    import csv, os
+    try:
+        csv_path = "data/ngo_data.csv"
+        # Since ngo_data.csv columns are: name,type,category,description,location,eligibility
+        write_header = not os.path.exists(csv_path) or os.path.getsize(csv_path) == 0
+        with open(csv_path, "a", newline="", encoding="utf-8") as f:
+            fieldnames = ["name", "type", "category", "description", "location", "eligibility"]
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            if write_header:
+                writer.writeheader()
+            
+            # Formatting event into ngo_data schema
+            event_name = event.get("title", "")
+            org_name = org.get("name", "")
+            writer.writerow({
+                "name": f"{event_name} (by {org_name})",
+                "type": "event",
+                "category": f"{event.get('start_date', '')} to {event.get('end_date', '')}",
+                "description": event.get("description", ""),
+                "location": event.get("location", ""),
+                "eligibility": "Event"
+            })
+        return True
+    except Exception as e:
+        print(f"Warning: Could not append event to ngo_data.csv: {e}")
+        return False
+
+
+@app.post("/api/org/sync-csv")
+async def org_sync_csv(authorization: Optional[str] = Header(default=None)):
+    """After org login, append org details to ngo_data.csv (idempotent)."""
+    org = _auth_org(authorization)
+    if not org:
+        return {"ok": False, "message": "Unauthorized"}
+    appended = _append_ngo_to_csv(dict(org))
+    return {"ok": True, "appended": appended}
+
+
+@app.get("/api/org/my-events")
+async def org_my_events(authorization: Optional[str] = Header(default=None)):
+    """Return all events belonging to the authenticated organization."""
+    org = _auth_org(authorization)
+    if not org:
+        return {"ok": False, "message": "Unauthorized", "events": []}
+    with persistence._conn() as conn:
+        rows = conn.execute(
+            """
+            SELECT id, title, description, category, location, start_date, end_date, status, created_at
+            FROM events
+            WHERE org_id = ?
+            ORDER BY created_at DESC
+            """,
+            (int(org["id"]),),
+        ).fetchall()
+    events = [dict(row) for row in rows]
+    return {"ok": True, "events": events}
 
 
 @app.get("/api/knowledge-graph")

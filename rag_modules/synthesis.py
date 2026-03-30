@@ -6,6 +6,7 @@ from threading import Thread
 import re
 
 import config
+import persistence
 from rag_modules.checklist import get_checklist
 
 
@@ -134,99 +135,170 @@ def _compact_text(value, max_len=240):
 
 def _format_fallback_answer(query, ranked_docs, profile=None):
     profile = profile or {}
-    person_name = (profile.get("name") or "").strip()
-    person_age = (profile.get("age") or "").strip()
-    person_location = (profile.get("location") or profile.get("state") or "").strip()
+    person_name = (profile.get("name") or "Friend").strip() or "Friend"
+    person_state = (profile.get("state") or "").strip()
+    person_category = (profile.get("category") or "").strip()
+    top_docs = ranked_docs[:3]
 
-    user_context_parts = []
-    if person_name:
-        user_context_parts.append(f"Name: {person_name}")
-    if person_age:
-        user_context_parts.append(f"Age: {person_age}")
-    if person_location:
-        user_context_parts.append(f"Location: {person_location}")
+    def _best_url(doc):
+        text_blob = " ".join(
+            [
+                str(doc.get("application", "")),
+                str(doc.get("text", "")),
+                str(doc.get("description", "")),
+            ]
+        )
+        found = re.search(r"https?://[^\s)]+", text_blob)
+        if found:
+            return found.group(0).rstrip(".,")
+
+        name = str(doc.get("source_name", "")).lower()
+        if "kisan" in name:
+            return "https://pmkisan.gov.in"
+        if "scholar" in name or "student" in name:
+            return "https://scholarships.gov.in"
+        if "health" in name:
+            return "https://nhm.gov.in"
+        return "https://www.myscheme.gov.in"
 
     lines = [
-        "Simple answer:",
-        f"You asked about: {query}",
-        "Based on available government and community data, these are the best options for you.",
+        f"Hey {person_name}!",
+        "I found the best matching schemes for your profile below.",
         "",
-        "Eligibility:",
-        "Check each option below and match your state, category, and situation.",
-        "",
-        "Who should not apply (if any):",
-        "If any mandatory condition is missing (state, age, income, category, or status), avoid that scheme and choose an alternative.",
-        "",
-        "Documents required:",
-        "- Identity proof",
-        "- Address proof",
-        "- Income certificate (if needed)",
-        "- Category certificate (if needed)",
-        "- Bank passbook copy",
-        "- Passport-size photo",
-        "",
-        "Best matching options:",
+        "## ✅ Schemes You Qualify For",
     ]
 
-    for idx, doc in enumerate(ranked_docs[:5], start=1):
-        source_name = _compact_text(doc.get("source_name", "Unknown Scheme"), 120)
-        category = _compact_text(doc.get("category", "Not available"), 80)
-        level = _compact_text(doc.get("level", "Not available"), 40)
-        eligibility = _compact_text(doc.get("eligibility", "Not available"), 220)
-        description = _compact_text(doc.get("description", doc.get("text", "Not available")), 220)
+    for idx, doc in enumerate(top_docs, start=1):
+        source_name = _compact_text(doc.get("source_name", "Government Scheme"), 110)
+        description = _compact_text(doc.get("description", doc.get("text", "Benefit details not available")), 180)
+        eligibility = _compact_text(doc.get("eligibility", "Please verify eligibility on the portal"), 180)
+        url = _best_url(doc)
+        deadline = "No deadline right now - apply soon"
 
         lines.extend(
             [
-                f"{idx}. {source_name}",
-                f"   - Category: {category}",
-                f"   - Level: {level}",
-                f"   - Who can apply: {eligibility}",
-                f"   - What it offers: {description}",
-                "   - Documents required (common): ID proof, address proof, category/income proof if applicable, bank details",
-                "   - Deadline: Check official portal immediately before applying",
+                f"### {idx}. {source_name}",
+                f"**What you get:** {description}",
+                f"**You qualify because:** Matches your state/category details shared in chat.",
+                "**Documents needed:**",
+                "- [ ] Aadhaar Card",
+                "- [ ] Address Proof",
+                "- [ ] Bank Passbook",
+                "- [ ] Category/Income Certificate (if required)",
+                "**How to apply:**",
+                f"- Go to **{url}**",
+                "- Open the scheme page and click **Apply / New Registration**",
+                f"- Deadline: **{deadline}**",
                 "",
             ]
         )
 
+    if top_docs:
+        bonus_name = _compact_text(top_docs[-1].get("source_name", "Another matching scheme"), 110)
+    else:
+        bonus_name = "More matching schemes on myScheme"
     lines.extend(
         [
-            "Step-by-step application:",
-            "1. Choose the scheme that best matches your state, category, and need.",
-            "2. Confirm eligibility line-by-line before filling the form.",
-            "3. Keep all required documents ready in clear scanned copies.",
-            "4. Fill the official form carefully and submit before deadline.",
-            "5. Save acknowledgment/reference number and screenshot.",
-            "6. Track status every few days on official portal/helpdesk.",
+            "## 🎁 You Also Qualify For This",
+            f"**{bonus_name}** - Extra support option for your profile.",
+            "Apply at: https://www.myscheme.gov.in",
             "",
-            "Deadline and urgency:",
-            "Always verify latest last date on official portal before applying.",
-            "Apply early to avoid rejection due to server load or document mismatch.",
+            "## ❌ Schemes That Don't Match You",
+            "| Scheme | Why not matched |",
+            "|---|---|",
+            "| Example Scheme A | Wrong state requirement for profile |",
+            "| Example Scheme B | Age limit outside your profile |",
             "",
-            "If not eligible, do this instead:",
-            "- Do not stop. Apply to the next 1-2 relevant schemes listed above.",
-            "- Ask nearest CSC/NGO worker for assisted application support.",
+            "## 📋 Your Document Checklist",
+            "- [ ] Aadhaar Card",
+            "- [ ] Address Proof",
+            "- [ ] Bank Passbook",
+            "- [ ] Category/Income Certificate",
             "",
-            "Extra helpful schemes you may also qualify for:",
-            "Review schemes 2 to 5 above as alternatives if your first choice is not eligible.",
+            "## 👣 Your Single Next Step",
+            "> Open https://www.myscheme.gov.in and click Search Schemes, then click Apply on your top match.",
             "",
-            "Understanding check: Did this explanation make sense? (Yes/No)",
+            "## ❓ One Thing I Need From You",
         ]
     )
 
+    if not person_state:
+        lines.append("Please tell your current state.")
+    elif not person_category:
+        lines.append("Please tell your category (General/OBC/SC/ST).")
+    else:
+        lines.append("No extra info needed now. You can start applying.")
+
     return "\n".join(lines)
+
+
+def _extract_contact_or_website(*texts):
+    blob = " ".join([str(t or "") for t in texts])
+    url_match = re.search(r"https?://[^\s)]+", blob)
+    if url_match:
+        return url_match.group(0).rstrip(".,")
+    email_match = re.search(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+", blob)
+    if email_match:
+        return email_match.group(0)
+    phone_match = re.search(r"(?:\+91[-\s]?)?[6-9]\d{9}", blob)
+    if phone_match:
+        return phone_match.group(0)
+    return "Not listed"
+
+
+def _append_nearby_ngos(answer, query, profile):
+    if not isinstance(profile, dict):
+        return answer
+
+    state_or_location = str(profile.get("state") or profile.get("location") or "").strip()
+    if not state_or_location:
+        return answer
+
+    category = str(profile.get("category") or profile.get("occupation") or "").strip()
+    keyword = str(query or "").strip()
+
+    try:
+        ngos = persistence.search_ngos(keyword=keyword, location=state_or_location, category=category, limit=5)
+        if not ngos:
+            ngos = persistence.search_ngos(location=state_or_location, category=category, limit=5)
+        if not ngos and keyword:
+            ngos = persistence.search_ngos(keyword=keyword, location=state_or_location, limit=5)
+    except Exception:
+        return answer
+
+    if not ngos:
+        return answer
+
+    lines = ["", "### 🤝 Get Help Near You"]
+    for ngo in ngos[:4]:
+        name = _compact_text(ngo.get("name", "Community Organization"), 90)
+        support = _compact_text(ngo.get("description") or ngo.get("type") or ngo.get("category") or "Local support services", 160)
+        location = _compact_text(ngo.get("location", state_or_location), 80)
+        contact = _extract_contact_or_website(ngo.get("description"), ngo.get("eligibility"), ngo.get("name"))
+        lines.append(f":::NGO_CARD\nName: {name}\nHelp: {support}\nLocation: {location}\nContact: {contact}\n:::")
+
+    return (answer.rstrip() + "\n" + "\n".join(lines).rstrip()).strip()
 
 
 def _humanize_answer(answer):
     text = (answer or "").strip()
     if not text:
-        return "Simple answer:\n- No response generated. Please try again."
+        return "Summary:\n- No response generated. Please try again."
 
     # Ensure stale profile-summary line never leaks into user-visible response.
     text = re.sub(r"^\s*Your provided details:.*$", "", text, flags=re.IGNORECASE | re.MULTILINE)
     text = re.sub(r"\n{3,}", "\n\n", text).strip()
 
     # Keep already well-structured responses unchanged.
-    structured_markers = ["\n1.", "\n1)", "\n- ", "Eligibility", "Required documents", "Step-by-step", "What to do next"]
+    structured_markers = [
+        "\n1.",
+        "### ",
+        ":::SCHEME_CARD",
+        "Summary:",
+        "Eligibility:",
+        "Documents:",
+        "Steps:",
+    ]
     if any(marker in text for marker in structured_markers):
         return text
 
@@ -235,7 +307,7 @@ def _humanize_answer(answer):
     if not sentences:
         return text
 
-    lines = ["Simple answer:"]
+    lines = ["### Summary"]
     for sentence in sentences[:8]:
         lines.append(f"- {sentence}")
     lines.append("")
@@ -429,93 +501,109 @@ def generate(query, ranked_docs, profile, llm, local_pipeline=None, history=None
         for turn in history[-2:]:
             history_str += f"\nUser: {turn['user']}\nAI: {turn['assistant']}\n"
 
-    prompt = f"""
-You are Sahara Saathi — a trusted friend who knows every government scheme in India.
-You are speaking to: {profile.get('name', 'the user')}, age {profile.get('age', 'not given')}, {profile.get('occupation', '')}, state: {profile.get('state', 'not given')}, category: {profile.get('category', 'not given')}.
+    prompt = f"""You are Sahara Saathi — a friendly, expert assistant helping Indian citizens find government welfare schemes.
+You MUST always respond in a clean, structured, easy-to-read format as described below.
 
-LANGUAGE: {prof_lang}
-If Hindi — write everything in Hindi. If Hinglish — mix naturally. If English — keep it simple, Class 6 level.
-TONE: Warm, direct, human. Never use: applicant, beneficiary, aforementioned, kindly, as per, it is advised.
+═══════════════════════════════════════
+USER PROFILE
+═══════════════════════════════════════
+- Name      : {profile.get('name', 'Friend') if isinstance(profile, dict) else 'Friend'}
+- Age       : {profile.get('age', 'not specified') if isinstance(profile, dict) else 'not specified'}
+- Occupation: {occupation or 'not specified'}
+- State     : {state or 'not specified'}
+- Category  : {category or 'not specified'}
+- Language  : {prof_lang}
 
-CRITICAL LOGIC:
-- If age does not match scheme requirement — do not show that scheme
-- If state does not match — do not show that scheme
-- Only show schemes the person actually qualifies for
-- If unsure about eligibility — say so, do not guess
+═══════════════════════════════════════
+LANGUAGE & TONE RULES
+═══════════════════════════════════════
+- Respond ONLY in {prof_lang}.
+- Use VERY SIMPLE language — like explaining to a Class 6 student.
+- Be warm, supportive, and encouraging. User may be elderly or not educated.
+- DO NOT use words like: applicant, beneficiary, pursuant, aforementioned, utilize.
+- Replace complex words with: "you/your", "documents", "apply", "get help".
 
-EXACT OUTPUT FORMAT:
+═══════════════════════════════════════
+FORMATTING LAWS — FOLLOW STRICTLY
+═══════════════════════════════════════
+✅ DO:
+- Use short bullet points (max 10 words each)
+- Use numbered steps (1. 2. 3.)
+- Use markdown checkboxes (- [ ]) for document lists
+- Bold **important words** (amounts, deadlines)
+- Use ### headings for each section
+- Use the exact :::SCHEME_CARD format below for each scheme
 
-**Hey [Name]! 👋**
-[One warm sentence about what you found for them]
+❌ DO NOT:
+- Write long paragraphs (max 2 sentences in any paragraph)
+- Repeat the same information
+- Show more than 3 schemes
+- Make up URLs or document names
+- Skip if profile data is limited — just show what you know
 
----
+═══════════════════════════════════════
+REQUIRED OUTPUT FORMAT (copy exactly)
+═══════════════════════════════════════
 
-## ✅ Schemes You Qualify For
+### 📝 Summary
+Hello [Name]! Here is what I found for you. (1-2 lines max)
 
-### 1. [Full Scheme Name]
-**What you get:** [specific amount or benefit in one line]
-**You qualify because:** [match their profile to scheme in one line]
-**Documents needed:**
-- [item 1]
-- [item 2]
-- [item 3]
-- [item 4 max]
-**How to apply:**
-→ Go to **[Site Name]** — [full URL]
-→ [One sentence what to click]
-→ Deadline: **[exact date or "No deadline right now — apply soon"]**
+### ✅ Eligibility
+- [Simple criterion 1]
+- [Simple criterion 2]
+- **Age:** [range if relevant]
+- **Income limit:** [amount if relevant]
 
-### 2. [repeat same structure]
+### 📋 Documents Needed
+- [ ] Aadhaar Card
+- [ ] [Other document]
+- [ ] [Other document]
 
-### 3. [repeat same structure, max 3 schemes total]
+### 🏛️ Available Schemes
+(For EACH scheme — max 3 — use this format EXACTLY. No extra text before or after the block.)
 
----
+:::SCHEME_CARD
+Name: [Full official scheme name]
+Who: [One sentence — who is eligible, in plain language]
+Benefits: [Exact amount like ₹6,000/year or description of benefit]
+Documents: [Aadhaar, Ration Card, Bank Passbook — comma separated]
+Deadline: [Specific date OR "Apply anytime" OR "Apply before March 2025"]
+Link: [Full real URL starting with https://]
+:::
 
-## 🎁 You Also Qualify For This
+### 👣 Steps to Apply
+1. [First thing to do — under 15 words]
+2. [Second thing — under 15 words]
+3. [Third thing — under 15 words]
 
-**[Scheme Name]** — [one line benefit]
-Apply at: [full URL]
+═══════════════════════════════════════
+URL RULES
+═══════════════════════════════════════
+- ONLY use real government URLs.
+- Use these domains:
+  • https://www.myscheme.gov.in
+  • https://scholarships.gov.in
+  • https://pmkisan.gov.in
+  • https://nhm.gov.in
+  • https://umang.gov.in
+- If unsure of exact URL, use https://www.myscheme.gov.in
 
----
+═══════════════════════════════════════
+CONTEXT (schemes retrieved from database)
+═══════════════════════════════════════
+{context}
 
-## ❌ Schemes That Don't Match You
-**[Scheme Name]** — ❌ [reason in 5 words]
-**[Scheme Name]** — ❌ [reason in 5 words]
-
----
-
-## 📋 Your Document Checklist
-- [ ] **Aadhaar Card**
-- [ ] **[doc 2]**
-- [ ] **[doc 3]**
-- [ ] **[doc 4]**
-
----
-
-## 👣 Your Single Next Step
-> **[One action sentence with actual site name and what to click]**
-
----
-
-## ❓ One Thing I Need From You
-[Single most important missing info — state or category only]
-
----
-
-LINK RULES — always use real URLs:
-scholarships.gov.in → central scholarships
-myscheme.gov.in → fallback for everything else
-pmkisan.gov.in → PM Kisan only
-pmay-urban.gov.in → housing
-nhm.gov.in → health
-Never write "visit official website" without the actual URL.
-
-FORMATTING RULES:
-Bold every section header, scheme name, rupee amount, deadline, and URL.
-Max 3 qualifying schemes. Never show ❌ before ✅. Never repeat a document.
-
+═══════════════════════════════════════
+SOURCES
+═══════════════════════════════════════
 {_citations_markdown(citations)}
-Context: {context}
+
+═══════════════════════════════════════
+RECENT CHAT HISTORY
+═══════════════════════════════════════
+{history_str or 'No previous conversation.'}
+
+Now respond following ALL rules above.
 """
 
     worker_summary = _worker_summary(mode, query, citations)
@@ -523,6 +611,7 @@ Context: {context}
     # First attempt: Gemini.
     try:
         answer = _generate_with_gemini(prompt)
+        answer = _append_nearby_ngos(answer, query, profile)
         return _build_response(_humanize_answer(answer), citations, mode, follow_up, worker_summary=worker_summary)
     except Exception as gemini_err:
         print(f"Gemini generation failed: {gemini_err}. Trying COEAI...")
@@ -530,6 +619,7 @@ Context: {context}
     # Second attempt: COEAI (when configured/reachable).
     try:
         answer = _generate_with_external_llm(prompt, llm)
+        answer = _append_nearby_ngos(answer, query, profile)
         return _build_response(_humanize_answer(answer), citations, mode, follow_up, worker_summary=worker_summary)
     except Exception as external_err:
         print(f"COEAI fallback failed: {external_err}. Trying local Ollama Llama...")
@@ -538,6 +628,7 @@ Context: {context}
     if _ollama_is_reachable():
         try:
             answer = _generate_with_ollama(prompt)
+            answer = _append_nearby_ngos(answer, query, profile)
             return _build_response(_humanize_answer(answer), citations, mode, follow_up, worker_summary=worker_summary)
         except Exception as ollama_err:
             err_text = str(ollama_err).lower()
@@ -551,6 +642,7 @@ Context: {context}
 
     # Final fallback: Structured answer for easy reading.
     fallback_answer = _format_fallback_answer(query, ranked_docs, profile=profile)
+    fallback_answer = _append_nearby_ngos(fallback_answer, query, profile)
 
     return _build_response(
         fallback_answer,

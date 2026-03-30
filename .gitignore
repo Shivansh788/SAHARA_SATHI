@@ -25,6 +25,19 @@ wheels/
 venv/
 ENV/
 
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+
+# Local runtime data
+*.db
+sahara.db
+startup.log
+*.log
+tmp/
+temp/
+
 # Project Specific Data & Indices (Generated)
 index.faiss
 rag_data.pkl

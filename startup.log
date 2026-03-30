@@ -1,30 +1,104 @@
-INFO:     Started server process [29821]
+INFO:     Started server process [53910]
 INFO:     Waiting for application startup.
-Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
-Starting up Sahara RAG Pipeline...
-Warning: SAHARA_TOKEN_SECRET is using default value. Set a strong secret for production.
-ffmpeg ready: /home/shivansh-soni/Projects/hackathon/SAHARA/venv/lib/python3.12/site-packages/imageio_ffmpeg/binaries/ffmpeg-linux-x86_64-v7.0.2
-Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 4584.72it/s]
-[1mBertModel LOAD REPORT[0m from: sentence-transformers/all-MiniLM-L6-v2
-Key                     | Status     |  | 
-------------------------+------------+--+-
-embeddings.position_ids | UNEXPECTED |  | 
-
-[3mNotes:
-- UNEXPECTED[3m	:can be ignored when loading from different task/architecture; not ok if you expect identical arch.[0m
-  → Building RAG index from database...
-    • Fetched 3382 government schemes from database
-    • Fetched 45 NGOs from database
-    • Built 3427 searchable documents
-    • Built BM25 sparse index
-  ✓ Cached RAG data to disk for faster startup
-Loading weights:   0%|          | 0/105 [00:00<?, ?it/s]Loading weights: 100%|██████████| 105/105 [00:00<00:00, 6170.43it/s]
-[1mBertForSequenceClassification LOAD REPORT[0m from: cross-encoder/ms-marco-MiniLM-L-6-v2
-Key                          | Status     |  | 
------------------------------+------------+--+-
-bert.embeddings.position_ids | UNEXPECTED |  | 
-
-[3mNotes:
-- UNEXPECTED[3m	:can be ignored when loading from different task/architecture; not ok if you expect identical arch.[0m
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8501 (Press CTRL+C to quit)
+Starting up Sahara RAG Pipeline...
+ffmpeg ready: /home/shivansh-soni/Projects/hackathon/SAHARA/venv/lib/python3.12/site-packages/imageio_ffmpeg/binaries/ffmpeg-linux-x86_64-v7.0.2
+  ✓ Loaded RAG cache from disk (3,382 schemes + 45 NGOs)
+Data.gov integration disabled (missing API configuration).
+  Loaded 4593 schemes from database
+  Loaded 45 NGOs from database
+✅ Application is ready! Open http://localhost:8501 in your browser.
+INFO:     127.0.0.1:39786 - "HEAD / HTTP/1.1" 405 Method Not Allowed
+INFO:     127.0.0.1:39698 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39698 - "GET /assets/preloader.mp4 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39708 - "GET /api/schemes?page=1&limit=10&state=Rajasthan&category= HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39724 - "GET /api/ngos?location=Rajasthan&category=&limit=3 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39740 - "GET /api/ngos?location=Rajasthan&category=&limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39752 - "GET /api/events HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39740 - "GET /api/ngos?location=Rajasthan&category=&limit=3 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39724 - "GET /api/ngos?location=Rajasthan&category=&limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39708 - "GET /assets/Prelaoder.mp4 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39698 - "GET /api/events HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53282 - "GET /api/events HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51850 - "POST /api/org/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33450 - "HEAD / HTTP/1.1" 405 Method Not Allowed
+INFO:     127.0.0.1:35272 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35272 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35276 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35272 - "GET /assets/sahara.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35272 - "GET /assets/preloader.mp4 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35272 - "GET /assets/preloader.mp4 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35272 - "GET /assets/preloader.mp4 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35272 - "GET /assets/Prelaoder.mp4 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35276 - "GET /api/schemes?page=1&limit=10&state=Rajasthan&category= HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35272 - "GET /api/ngos?location=Rajasthan&category=&limit=3 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35276 - "GET /assets/Prelaoder.mp4 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35284 - "GET /api/ngos?location=Rajasthan&category=&limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35286 - "GET /api/events HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35288 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35298 - "GET /assets/Prelaoder.mp4 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35272 - "GET /api/schemes?page=1&limit=10&state=Rajasthan&category= HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35276 - "GET /api/ngos?location=Rajasthan&category=&limit=3 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35286 - "GET /api/ngos?location=Rajasthan&category=&limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35284 - "GET /api/events HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35288 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35272 - "GET /api/schemes?page=1&limit=10&state=Rajasthan&category= HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35276 - "GET /api/events HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35284 - "GET /api/ngos?location=Rajasthan&category=&limit=3 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35286 - "GET /api/ngos?location=Rajasthan&category=&limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35288 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35298 - "GET /api/bookmarks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35272 - "GET /api/ngos?location=Rajasthan&category=&limit=3 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35276 - "GET /api/events HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35284 - "GET /api/ngos?location=Rajasthan&category=&limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35286 - "GET /api/bookmarks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35272 - "GET /api/ngos?location=Rajasthan&category=&limit=3 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35272 - "GET /api/ngos?location=Rajasthan&category=&limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35276 - "GET /api/events HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35284 - "GET /api/ngos?location=Rajasthan&category=&limit=3 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35272 - "GET /api/ngos?location=Rajasthan&category=&limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35272 - "GET /api/bookmarks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35272 - "GET /api/events HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48470 - "POST /api/auth/signup HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48470 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48470 - "GET /api/bookmarks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48470 - "GET /api/events HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52388 - "GET /api/events HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33734 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33734 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33734 - "GET /assets/preloader.mp4 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42630 - "GET /api/schemes?page=1&limit=10&state=Rajasthan&category= HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33734 - "GET /api/ngos?location=Rajasthan&category=&limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42646 - "GET /api/ngos?location=Rajasthan&category=&limit=3 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42658 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42664 - "GET /api/events HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33734 - "GET /api/ngos?location=Rajasthan&category=&limit=3 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42630 - "GET /api/ngos?location=Rajasthan&category=&limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42670 - "GET /assets/Prelaoder.mp4 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42664 - "GET /assets/preloader.mp4 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42646 - "GET /api/events HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33734 - "GET /api/bookmarks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33734 - "GET /assets/Prelaoder.mp4 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33734 - "GET /api/schemes?page=1&limit=10&state=Rajasthan&category= HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42630 - "GET /api/ngos?location=Rajasthan&category=&limit=3 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42646 - "GET /api/ngos?location=Rajasthan&category=&limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42664 - "GET /api/events HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33734 - "GET /api/events HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42630 - "GET /api/ngos?location=Rajasthan&category=&limit=3 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42664 - "GET /api/ngos?location=Rajasthan&category=&limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33734 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33734 - "GET /api/bookmarks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52998 - "GET /api/events HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44322 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44322 - "GET /assets/preloader.mp4 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44326 - "GET /api/schemes?page=1&limit=10&state=Rajasthan&category= HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44322 - "GET /api/events HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44340 - "GET /api/ngos?location=Rajasthan&category=&limit=3 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44348 - "GET /api/ngos?location=Rajasthan&category=&limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44364 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44366 - "GET /assets/Prelaoder.mp4 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44322 - "GET /api/events HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44326 - "GET /api/ngos?location=Rajasthan&category=&limit=3 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44322 - "GET /api/ngos?location=Rajasthan&category=&limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44322 - "GET /api/bookmarks HTTP/1.1" 200 OK

@@ -1,151 +1,101 @@
-# SAHARA Saathi
+# SAHARA - Quick Share Reference
 
-AI-powered welfare guidance platform with:
-- FastAPI backend
-- Hybrid retrieval (BM25 + FAISS + reranker)
-- SQLite persistence (auth, bookmarks, chat history, profile facts, NGOs, events)
-- Optional COEAI support (UPESNET-gated)
+Status: Ready to share | Updated: March 29, 2026
 
-## 1) Fastest Setup For Sharing (Recommended)
-
-From project root:
-
-```bash
-chmod +x bootstrap.sh run.sh
-./bootstrap.sh
-./run.sh
-```
-
-Open:
-
-```text
-http://localhost:8501
-```
-
-What this does automatically:
-- Creates `venv`
-- Installs all dependencies from `requirements.txt`
-- Creates `.env` from `.env.example` if missing
-- Runs `db_migrate.py`
-
-Optional one-liner to setup and start immediately:
-
-```bash
-chmod +x bootstrap.sh run.sh && ./bootstrap.sh --run
-```
-
-## 2) Manual Setup (Linux/macOS)
+## Fast Setup (Friends)
 
 Run from project root:
 
 ```bash
-python3 -m venv venv && source venv/bin/activate && pip install -U pip && pip install -r requirements.txt && python db_migrate.py && python app.py
+chmod +x bootstrap.sh run.sh
+./bootstrap.sh --run
 ```
 
 Open:
 
-```text
 http://localhost:8501
-```
 
-## 3) Windows Setup (PowerShell)
+## What Bootstrap Does
 
-```powershell
-python -m venv venv
-.\venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-pip install -r requirements.txt
-python db_migrate.py
-python app.py
-```
+- Creates virtual environment in venv
+- Installs requirements from requirements.txt
+- Creates .env from .env.example if missing
+- Runs database migration via db_migrate.py
+- Starts app immediately with --run
 
-## 4) Runtime Notes
+## LLM Fallback Order
 
-- Default port: 8501
-- If port is busy, stop old process and rerun.
-- First boot may take longer due to model/index initialization.
-- If you do not configure Gemini/COEAI keys, the app still runs using fallback mode.
+1. Gemini (if GEMINI_API_KEY is set)
+2. COEAI (if configured and reachable on UPESNET)
+3. Ollama local model (if running)
+4. Structured offline fallback
 
-## 5) Environment and Configuration
+Default timeouts:
 
-All settings are centralized in [config.py](config.py) and can be overridden via `.env`.
+- Gemini read timeout: 20 seconds
+- COEAI timeout: 120 seconds
+- Ollama read timeout: 10 seconds
 
-Important keys:
-- COEAI_API_KEY
-- COEAI_MODEL
-- UPESNET_CONNECTED_FLAG
-- SAHARA_TOKEN_SECRET (via env override)
-- DATA_GOV_* (Data.gov integration settings)
-- GEMINI_API_KEY
-- OPENAI_API_KEY (only for OpenAI TTS)
+## Environment Setup
 
-Quick env setup:
+Create local env file:
 
 ```bash
 cp .env.example .env
-# edit .env and add only the keys you need
 ```
 
-Recommended secure override pattern:
+Only fill keys you actually need:
+
+- GEMINI_API_KEY (optional)
+- COEAI_API_KEY (optional)
+- OPENAI_API_KEY (optional, only for OpenAI TTS)
+- SAHARA_TOKEN_SECRET (recommended)
+
+## Daily Commands
+
+Start app:
 
 ```bash
-export SAHARA_TOKEN_SECRET="change-me-to-a-strong-secret"
-export COEAI_API_KEY="your-key-if-needed"
-python app.py
+./run.sh
 ```
 
-## 6) Data and Migration
+Stop app:
 
-Migration script loads:
-- Government schemes from data/Gov_schemes*.csv
-- NGOs from data/ngo_data.csv
-- NGO events from data/ngo_events.csv
+- Press Ctrl+C in the running terminal
 
-Run migration anytime:
+Health check:
 
 ```bash
-python db_migrate.py
+curl -s http://127.0.0.1:8501/api/health
 ```
 
-## 7) Core API Endpoints
-
-- Health: GET /api/health
-- Ask assistant: POST /api/ask
-- Auth: /api/auth/signup, /api/auth/login, /api/auth/me
-- Bookmarks: GET/POST/DELETE /api/bookmarks
-- NGOs: GET /api/ngos
-- Events: GET/POST /api/events
-- Org flow: /api/org/register, /api/org/verify, /api/org/login, /api/org/me
-
-## 8) Memory Safety and Trust
-
-The assistant now stores only explicit user-declared personal facts (for example: "my age is 35") in DB profile memory.
-It does not infer personal age/name/location from random numbers or ambiguous text.
-
-## 9) Troubleshooting
-
-Missing module:
+Quick ask test:
 
 ```bash
-pip install -r requirements.txt
+curl -sS -X POST http://127.0.0.1:8501/api/ask \
+  -H "Content-Type: application/json" \
+  -d '{"query":"pm kisan eligibility","session_id":"smoke1","language":"english","mode":"citizen"}'
 ```
 
-Fresh reinstall (safe reset of env only):
-
-```bash
-rm -rf venv
-./bootstrap.sh
-```
+## Troubleshooting
 
 Port already in use:
 
 ```bash
 pkill -f "python.*app.py"
-python app.py
+./run.sh
 ```
 
-Verify server:
+Missing module error:
 
 ```bash
-curl -s http://127.0.0.1:8501/api/health
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+Reset environment:
+
+```bash
+rm -rf venv
+./bootstrap.sh
 ```

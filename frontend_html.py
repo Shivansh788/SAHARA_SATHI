@@ -1,12 +1,14 @@
 import json
 
-html_content = """<!DOCTYPE html>
+html_content = r"""<!DOCTYPE html>
 <html class="light" lang="en">
 <head>
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
     <title>Sahara Saathi | Empathetic Welfare Dashboard</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/icon?family=Material+Symbols+Outlined" rel="stylesheet"/>
     <script id="tailwind-config">
@@ -82,6 +84,96 @@ html_content = """<!DOCTYPE html>
         .chat-input-field:focus {
             outline: none;
         }
+        /* ── Chat input bar polish ── */
+        .chat-action-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            border: 1.5px solid #e2e8f0;
+            background: #ffffff;
+            color: #64748b;
+            cursor: pointer;
+            transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease, transform 0.12s ease, box-shadow 0.18s ease;
+        }
+        .chat-action-btn:hover {
+            background: #f0f4ff;
+            color: #00003c;
+            border-color: #c7d2fe;
+            box-shadow: 0 2px 8px rgba(0,0,64,0.10);
+        }
+        .chat-action-btn:active {
+            transform: scale(0.93);
+            background: #e0e7ff;
+        }
+        .chat-send-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            width: 52px;
+            height: 52px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #00003c 0%, #000080 100%);
+            color: #ffffff;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 14px rgba(0,0,128,0.30);
+            transition: background 0.18s ease, transform 0.12s ease, box-shadow 0.18s ease;
+        }
+        .chat-send-btn:hover {
+            background: linear-gradient(135deg, #000080 0%, #0000b0 100%);
+            box-shadow: 0 6px 20px rgba(0,0,128,0.40);
+            transform: translateY(-1px);
+        }
+        .chat-send-btn:active {
+            transform: scale(0.92) translateY(0);
+            box-shadow: 0 2px 8px rgba(0,0,128,0.25);
+        }
+        .chat-mode-select {
+            height: 52px;
+            padding: 0 12px;
+            border-radius: 14px;
+            border: 1.5px solid #e2e8f0;
+            background: #ffffff;
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #374151;
+            cursor: pointer;
+            transition: border-color 0.18s ease, box-shadow 0.18s ease;
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2364748b' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            padding-right: 28px;
+        }
+        .chat-mode-select:focus {
+            outline: none;
+            border-color: #000080;
+            box-shadow: 0 0 0 3px rgba(0,0,128,0.10);
+        }
+        .chat-text-input {
+            flex: 1;
+            min-width: 0;
+            height: 52px;
+            padding: 0 20px;
+            border-radius: 16px;
+            border: 1.5px solid #e2e8f0;
+            background: #ffffff;
+            font-size: 0.97rem;
+            color: #1e293b;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+            transition: border-color 0.18s ease, box-shadow 0.18s ease;
+        }
+        .chat-text-input:focus {
+            outline: none;
+            border-color: #000080;
+            box-shadow: 0 0 0 3px rgba(0,0,128,0.08), 0 1px 4px rgba(0,0,0,0.05);
+        }
         .line-clamp-2 {
             display: -webkit-box;
             -webkit-line-clamp: 2;
@@ -102,6 +194,269 @@ html_content = """<!DOCTYPE html>
             opacity: 0;
             visibility: hidden;
             pointer-events: none;
+        }
+        #main-sidebar {
+            transition: width 0.3s ease;
+        }
+        #main-content {
+            transition: padding-left 0.3s ease;
+        }
+        #main-sidebar.sidebar-collapsed {
+            width: 5rem;
+        }
+        @media (min-width: 768px) {
+            #main-content.sidebar-collapsed {
+                padding-left: 5rem;
+            }
+        }
+        #main-sidebar.sidebar-collapsed .nav-label {
+            width: 0;
+            opacity: 0;
+            overflow: hidden;
+            pointer-events: none;
+        }
+        #main-sidebar.sidebar-collapsed .nav-link-side {
+            justify-content: center;
+            position: relative;
+        }
+        #main-sidebar.sidebar-collapsed .sidebar-hotline {
+            display: none;
+        }
+        .sidebar-volunteer-btn {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 88%;
+            margin: 0 auto 12px auto;
+            padding: 13px 18px;
+            border-radius: 14px;
+            background: #eef0ff;
+            color: #00003c;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 0.82rem;
+            font-weight: 800;
+            letter-spacing: 0.01em;
+            border: 1.5px solid #c7ccf5;
+            cursor: pointer;
+            transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+            text-align: left;
+            box-shadow: 0 2px 8px 0 rgba(0,0,60,0.06);
+        }
+        .sidebar-volunteer-btn:hover {
+            background: #dde2ff;
+            box-shadow: 0 4px 16px 0 rgba(0,0,60,0.12);
+            transform: translateY(-1px);
+        }
+        .sidebar-volunteer-btn:active {
+            transform: translateY(0);
+            background: #c7ccf5;
+        }
+        #main-sidebar.sidebar-collapsed .sidebar-volunteer-btn {
+            display: none;
+        }
+        #main-sidebar.sidebar-collapsed .nav-link-side::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            left: calc(100% + 10px);
+            top: 50%;
+            transform: translateY(-50%);
+            background: #00003c;
+            color: #ffffff;
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+            z-index: 70;
+        }
+        #main-sidebar.sidebar-collapsed .nav-link-side:hover::after {
+            opacity: 1;
+        }
+        .sidebar-hamburger-line {
+            width: 18px;
+            height: 2px;
+            border-radius: 9999px;
+            background: #00003c;
+        }
+        .ai-markdown {
+            font-size: 1.15rem;
+            line-height: 1.85;
+            color: #1f2937;
+        }
+        .ai-markdown h1,
+        .ai-markdown h2,
+        .ai-markdown h3,
+        .ai-markdown h4 {
+            color: #00003c;
+            font-family: 'Manrope', sans-serif;
+            font-weight: 800;
+            line-height: 1.4;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .ai-markdown h1 { font-size: 1.85rem; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.5rem; }
+        .ai-markdown h2 { font-size: 1.6rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.4rem; }
+        .ai-markdown h3 { font-size: 1.35rem; }
+        .ai-markdown h4 { font-size: 1.15rem; }
+        .ai-markdown p {
+            margin: 0.75rem 0;
+        }
+        .ai-markdown ul,
+        .ai-markdown ol {
+            margin: 0.75rem 0 1rem 1.5rem;
+        }
+        .ai-markdown li {
+            margin: 0.4rem 0;
+        }
+        .ai-markdown hr {
+            margin: 1.5rem 0;
+            border: 0;
+            border-top: 2px dashed #e2e8f0;
+        }
+        .ai-markdown blockquote {
+            margin: 1.25rem 0;
+            padding: 1rem 1.25rem;
+            border-left: 6px solid #fe9832;
+            border-radius: 0.75rem;
+            background: #fff7ed;
+            color: #7c2d12;
+            font-style: italic;
+        }
+        .ai-markdown a {
+            color: #000080;
+            font-weight: 800;
+            text-decoration: underline;
+            text-underline-offset: 3px;
+        }
+        .ai-markdown input[type="checkbox"] {
+            width: 1.25rem;
+            height: 1.25rem;
+            accent-color: #fe9832;
+            margin-right: 0.75rem;
+        }
+        .ai-markdown .amount-highlight {
+            color: #c2410c;
+            font-weight: 900;
+            background: #ffedd5;
+            border-radius: 0.5rem;
+            padding: 0.1rem 0.5rem;
+            border: 1px solid #fed7aa;
+        }
+        .card-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.25rem;
+            margin: 1.5rem 0;
+        }
+        .rich-card {
+            background: white;
+            border-radius: 1.5rem;
+            padding: 1.5rem;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+        }
+        .rich-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            border-color: #000080;
+        }
+        .rich-card-title {
+            font-weight: 800;
+            font-size: 1.25rem;
+            color: #00003c;
+            margin-bottom: 0.75rem;
+        }
+        .rich-card-detail {
+            font-size: 0.95rem;
+            color: #4b5563;
+            margin-bottom: 0.5rem;
+            display: flex;
+            gap: 0.5rem;
+        }
+        .rich-card-detail b {
+            color: #111827;
+            min-width: 100px;
+        }
+        .rich-card-actions {
+            margin-top: 1.25rem;
+            display: flex;
+            gap: 0.75rem;
+        }
+        .rich-card-btn {
+            padding: 0.6rem 1.25rem;
+            border-radius: 0.75rem;
+            font-weight: 700;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+        .btn-primary-card {
+            background: #00003c;
+            color: white;
+        }
+        .btn-primary-card:hover {
+            background: #000080;
+        }
+        .btn-secondary-card {
+            background: #f3f4f6;
+            color: #374151;
+            border: 1px solid #e5e7eb;
+        }
+        .btn-secondary-card:hover {
+            background: #e5e7eb;
+        }
+        .rich-card-badge {
+            display: inline-block;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.07em;
+            text-transform: uppercase;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            background: #f0f4ff;
+            color: #00003c;
+            margin-bottom: 0.75rem;
+        }
+        .ngo-badge {
+            background: #f0fdf4;
+            color: #166534;
+        }
+        .ngo-title {
+            color: #166534 !important;
+        }
+        .scheme-card {
+            border-left: 5px solid #00003c;
+        }
+        .ngo-card {
+            border-left: 5px solid #16a34a;
+        }
+        .detail-label {
+            font-weight: 700;
+            color: #374151;
+            min-width: 130px;
+            flex-shrink: 0;
+        }
+        .rich-card-detail {
+            display: flex;
+            gap: 0.5rem;
+            align-items: flex-start;
+            font-size: 0.97rem;
+            color: #4b5563;
+            margin-bottom: 0.6rem;
+        }
+        .deadline-row .deadline-badge {
+            background: #fff0e6;
+            color: #c2410c;
+            font-weight: 800;
+            border-radius: 0.5rem;
+            padding: 0.1rem 0.6rem;
+            border: 1px solid #fed7aa;
         }
     </style>
 </head>
@@ -148,12 +503,12 @@ html_content = """<!DOCTYPE html>
                 <h2 class="text-2xl font-bold text-white mb-6 font-['Manrope']">Welcome Back</h2>
                 <div class="flex flex-col gap-5">
                     <div>
-                        <label class="text-blue-200 text-xs font-bold uppercase tracking-widest mb-2 block font-['Plus_Jakarta_Sans']">Aadhaar / Mobile Number</label>
-                        <input id="login-id" type="text" placeholder="Enter Aadhaar or mobile number" class="w-full h-14 px-5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-blue-300/50 focus:outline-none focus:ring-2 focus:ring-orange-400/50 focus:border-orange-400/50 text-sm font-['Plus_Jakarta_Sans']"/>
+                        <label class="text-blue-200 text-xs font-bold uppercase tracking-widest mb-2 block font-['Plus_Jakarta_Sans']">Email Address</label>
+                        <input id="login-id" type="email" placeholder="Enter your email" class="w-full h-14 px-5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-blue-300/50 focus:outline-none focus:ring-2 focus:ring-orange-400/50 focus:border-orange-400/50 text-sm font-['Plus_Jakarta_Sans']"/>
                     </div>
                     <div>
-                        <label class="text-blue-200 text-xs font-bold uppercase tracking-widest mb-2 block font-['Plus_Jakarta_Sans']">Password / OTP</label>
-                        <input id="login-pass" type="password" placeholder="Enter password or OTP" class="w-full h-14 px-5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-blue-300/50 focus:outline-none focus:ring-2 focus:ring-orange-400/50 focus:border-orange-400/50 text-sm font-['Plus_Jakarta_Sans']"/>
+                        <label class="text-blue-200 text-xs font-bold uppercase tracking-widest mb-2 block font-['Plus_Jakarta_Sans']">Password</label>
+                        <input id="login-pass" type="password" placeholder="Enter your password" class="w-full h-14 px-5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-blue-300/50 focus:outline-none focus:ring-2 focus:ring-orange-400/50 focus:border-orange-400/50 text-sm font-['Plus_Jakarta_Sans']"/>
                     </div>
                     <button onclick="handleLogin()" class="w-full h-14 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl font-bold text-sm hover:from-orange-600 hover:to-orange-700 transition-all shadow-lg shadow-orange-500/30 flex items-center justify-center gap-2 font-['Plus_Jakarta_Sans']">
                         <span class="material-symbols-outlined text-lg">login</span>
@@ -199,8 +554,8 @@ html_content = """<!DOCTYPE html>
                         <input id="signup-name" type="text" placeholder="Enter your full name" class="w-full h-14 px-5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-blue-300/50 focus:outline-none focus:ring-2 focus:ring-orange-400/50 text-sm font-['Plus_Jakarta_Sans']"/>
                     </div>
                     <div>
-                        <label class="text-blue-200 text-xs font-bold uppercase tracking-widest mb-2 block font-['Plus_Jakarta_Sans']">Aadhaar / Mobile Number</label>
-                        <input id="signup-id" type="text" placeholder="Enter Aadhaar or mobile number" class="w-full h-14 px-5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-blue-300/50 focus:outline-none focus:ring-2 focus:ring-orange-400/50 text-sm font-['Plus_Jakarta_Sans']"/>
+                        <label class="text-blue-200 text-xs font-bold uppercase tracking-widest mb-2 block font-['Plus_Jakarta_Sans']">Email Address</label>
+                        <input id="signup-email" type="email" placeholder="Enter your email address" class="w-full h-14 px-5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-blue-300/50 focus:outline-none focus:ring-2 focus:ring-orange-400/50 text-sm font-['Plus_Jakarta_Sans']"/>
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <div>
@@ -232,7 +587,17 @@ html_content = """<!DOCTYPE html>
                     </div>
                     <div>
                         <label class="text-blue-200 text-xs font-bold uppercase tracking-widest mb-2 block font-['Plus_Jakarta_Sans']">Password</label>
-                        <input id="signup-pass" type="password" placeholder="Create a password" class="w-full h-14 px-5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-blue-300/50 focus:outline-none focus:ring-2 focus:ring-orange-400/50 text-sm font-['Plus_Jakarta_Sans']"/>
+                        <input id="signup-pass" type="password" placeholder="Create a strong password" oninput="checkPasswordStrength(this.value)" class="w-full h-14 px-5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-blue-300/50 focus:outline-none focus:ring-2 focus:ring-orange-400/50 text-sm font-['Plus_Jakarta_Sans']"/>
+                        <!-- Password strength meter -->
+                        <div class="mt-2">
+                            <div class="flex gap-1 mb-1">
+                                <div id="ps-bar-1" class="h-1 flex-1 rounded-full bg-white/20 transition-all duration-300"></div>
+                                <div id="ps-bar-2" class="h-1 flex-1 rounded-full bg-white/20 transition-all duration-300"></div>
+                                <div id="ps-bar-3" class="h-1 flex-1 rounded-full bg-white/20 transition-all duration-300"></div>
+                                <div id="ps-bar-4" class="h-1 flex-1 rounded-full bg-white/20 transition-all duration-300"></div>
+                            </div>
+                            <p id="ps-hint" class="text-blue-300/70 text-xs font-['Plus_Jakarta_Sans']">Min 8 chars · uppercase · number · special char</p>
+                        </div>
                     </div>
                     <button onclick="handleSignup()" class="w-full h-14 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl font-bold text-sm hover:from-orange-600 hover:to-orange-700 transition-all shadow-lg shadow-orange-500/30 flex items-center justify-center gap-2 font-['Plus_Jakarta_Sans']">
                         <span class="material-symbols-outlined text-lg">person_add</span>
@@ -282,42 +647,49 @@ html_content = """<!DOCTYPE html>
 
     <!-- Side Navigation (Mobile Hidden) -->
     <aside id="main-sidebar" class="h-screen w-72 fixed left-0 top-0 bg-slate-50 border-r border-outline-variant/10 pt-24 pb-8 flex flex-col z-40">
-        <div class="px-6 flex flex-col gap-3 flex-1">
-            <button onclick="toggleSideMenu()" class="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-white border border-slate-200 text-primary font-bold">
-                <span class="flex items-center gap-2">
-                    <span class="material-symbols-outlined">menu</span>
-                    <span id="side-menu-label" class="font-['Plus_Jakarta_Sans'] text-sm">Menu</span>
-                </span>
-                <span id="side-menu-chevron" class="material-symbols-outlined">expand_more</span>
+        <div class="px-4 md:px-6 flex flex-col gap-3 flex-1">
+            <button id="sidebar-hamburger-btn" onclick="toggleSidebar(event)" class="w-10 h-10 rounded-lg bg-white border border-slate-200 text-primary hover:bg-slate-50 transition-all flex flex-col items-center justify-center gap-1 self-start" aria-label="Toggle sidebar">
+                <span class="sidebar-hamburger-line"></span>
+                <span class="sidebar-hamburger-line"></span>
+                <span class="sidebar-hamburger-line"></span>
             </button>
-            <div id="side-menu-items" class="hidden-view flex-col gap-1">
-                <a class="nav-link-side cursor-pointer flex items-center gap-4 px-4 py-3 rounded-xl text-blue-900 font-bold border-r-4 border-orange-500 bg-orange-50/50 transition-all duration-300" onclick="switchTab('home')" data-target="home">
+            <div id="side-nav-items" class="flex flex-col gap-1">
+                <a class="nav-link-side cursor-pointer flex items-center gap-4 px-4 py-3 rounded-xl text-blue-900 font-bold border-r-4 border-orange-500 bg-orange-50/50 transition-all duration-300" onclick="switchTab('home')" data-target="home" data-tooltip="Home">
                     <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">home</span>
-                    <span class="font-['Plus_Jakarta_Sans'] text-sm">Home</span>
+                    <span class="nav-label font-['Plus_Jakarta_Sans'] text-sm">Home</span>
                 </a>
-                <a class="nav-link-side cursor-pointer flex items-center gap-4 px-4 py-3 rounded-xl text-slate-500 hover:text-blue-900 hover:bg-blue-50 transition-all duration-300" onclick="switchTab('schemes')" data-target="schemes">
+                <a class="nav-link-side cursor-pointer flex items-center gap-4 px-4 py-3 rounded-xl text-slate-500 hover:text-blue-900 hover:bg-blue-50 transition-all duration-300" onclick="switchTab('schemes')" data-target="schemes" data-tooltip="Schemes">
                     <span class="material-symbols-outlined">account_balance</span>
-                    <span class="font-['Plus_Jakarta_Sans'] text-sm">Schemes</span>
+                    <span class="nav-label font-['Plus_Jakarta_Sans'] text-sm">Schemes</span>
                 </a>
-                <a class="nav-link-side cursor-pointer flex items-center gap-4 px-4 py-3 rounded-xl text-slate-500 hover:text-blue-900 hover:bg-blue-50 transition-all duration-300" onclick="switchTab('applications')" data-target="applications">
+                <a class="nav-link-side cursor-pointer flex items-center gap-4 px-4 py-3 rounded-xl text-slate-500 hover:text-blue-900 hover:bg-blue-50 transition-all duration-300" onclick="switchTab('applications')" data-target="applications" data-tooltip="Applications">
                     <span class="material-symbols-outlined">description</span>
-                    <span class="font-['Plus_Jakarta_Sans'] text-sm">Applications</span>
+                    <span class="nav-label font-['Plus_Jakarta_Sans'] text-sm">Applications</span>
                 </a>
-                <a class="nav-link-side cursor-pointer flex items-center gap-4 px-4 py-3 rounded-xl text-slate-500 hover:text-blue-900 hover:bg-blue-50 transition-all duration-300" onclick="switchTab('events')" data-target="events">
-                    <span class="material-symbols-outlined">event</span>
-                    <span class="font-['Plus_Jakarta_Sans'] text-sm">NGO Events</span>
-                </a>
-                <a class="nav-link-side cursor-pointer flex items-center gap-4 px-4 py-3 rounded-xl text-slate-500 hover:text-blue-900 hover:bg-blue-50 transition-all duration-300" onclick="switchTab('chat')" data-target="chat">
+                <a class="nav-link-side cursor-pointer flex items-center gap-4 px-4 py-3 rounded-xl text-slate-500 hover:text-blue-900 hover:bg-blue-50 transition-all duration-300" onclick="switchTab('chat')" data-target="chat" data-tooltip="Chat Assistant">
                     <span class="material-symbols-outlined">forum</span>
-                    <span class="font-['Plus_Jakarta_Sans'] text-sm">Chat Assistant</span>
+                    <span class="nav-label font-['Plus_Jakarta_Sans'] text-sm">Chat Assistant</span>
                 </a>
-                <a class="nav-link-side cursor-pointer flex items-center gap-4 px-4 py-3 rounded-xl text-slate-500 hover:text-blue-900 hover:bg-blue-50 transition-all duration-300" onclick="switchTab('profile')" data-target="profile">
+                <a class="nav-link-side cursor-pointer flex items-center gap-4 px-4 py-3 rounded-xl text-slate-500 hover:text-blue-900 hover:bg-blue-50 transition-all duration-300" onclick="switchTab('profile')" data-target="profile" data-tooltip="Profile">
                     <span class="material-symbols-outlined">person</span>
-                    <span class="font-['Plus_Jakarta_Sans'] text-sm">Profile</span>
+                    <span class="nav-label font-['Plus_Jakarta_Sans'] text-sm">Profile</span>
+                </a>
+                <a id="org-nav-item" class="nav-link-side cursor-pointer flex items-center gap-4 px-4 py-3 rounded-xl text-slate-500 hover:text-blue-900 hover:bg-orange-50 transition-all duration-300" onclick="switchTab('org-profile')" data-target="org-profile" data-tooltip="Org Dashboard" style="display:none;">
+                    <span class="material-symbols-outlined text-orange-500" style="font-variation-settings: 'FILL' 1;">admin_panel_settings</span>
+                    <span class="nav-label font-['Plus_Jakarta_Sans'] text-sm font-bold text-orange-600">Org Dashboard</span>
                 </a>
             </div>
         </div>
-        <div class="px-8 mt-auto">
+        <div class="px-8 mt-auto sidebar-hotline">
+            <button
+                id="sidebar-volunteer-cta"
+                class="sidebar-volunteer-btn"
+                onclick="openAuth('login')"
+                aria-label="Volunteer an Event"
+            >
+                <span class="material-symbols-outlined" style="font-size:18px; color:#00003c;">volunteer_activism</span>
+                Volunteer an Event
+            </button>
             <div class="p-4 bg-primary text-white rounded-2xl relative overflow-hidden group">
                 <div class="relative z-10">
                     <p class="text-xs font-label opacity-70 mb-1">Assistance Hotlines</p>
@@ -548,8 +920,8 @@ html_content = """<!DOCTYPE html>
             </div>
 
             <!-- ================= VIEW: CHAT ASSISTANT ================= -->
-            <div id="view-chat" class="view-section hidden-view flex flex-col h-[calc(100vh-140px)]">
-                <div class="flex-1 bg-surface-container-lowest rounded-[2.5rem] premium-shadow border border-slate-100 flex flex-col overflow-hidden">
+            <div id="view-chat" class="view-section hidden-view flex flex-col h-[calc(100vh-140px)] px-1 sm:px-2 md:px-3 lg:px-4">
+                <div class="flex-1 bg-surface-container-lowest rounded-[2.5rem] premium-shadow border border-slate-100 flex flex-col overflow-hidden max-w-6xl w-full mx-auto">
                     <div class="p-6 bg-primary border-b border-primary-container flex items-center justify-between">
                         <div class="flex items-center gap-4">
                             <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg">
@@ -574,27 +946,32 @@ html_content = """<!DOCTYPE html>
                     </div>
 
                     <!-- Chat Input -->
-                    <div class="p-6 bg-white border-t border-slate-100 shadow-[0_-10px_40px_rgba(0,0,0,0.03)] focus-within:bg-blue-50/30 transition-colors">
-                        <div class="relative flex items-center gap-4">
-                            <button id="voice-input-btn" onclick="startVoiceInput()" class="w-12 h-12 rounded-full border border-slate-200 text-slate-400 hover:text-primary hover:bg-slate-50 flex items-center justify-center transition-all" title="बोलें">
-                                <span class="material-symbols-outlined">mic</span>
+                    <div class="px-5 py-4 bg-white border-t border-slate-100 shadow-[0_-10px_40px_rgba(0,0,0,0.03)] focus-within:bg-blue-50/20 transition-colors">
+                        <div class="flex items-center gap-3">
+                            <!-- Voice input -->
+                            <button id="voice-input-btn" onclick="startVoiceInput()" class="chat-action-btn" title="बोलें" aria-label="Voice input">
+                                <span class="material-symbols-outlined" style="font-size:22px;">mic</span>
                             </button>
-                            <button id="speak-last-btn" onclick="speakLastAnswer()" class="w-12 h-12 rounded-full border border-slate-200 text-slate-400 hover:text-primary hover:bg-slate-50 flex items-center justify-center transition-all" title="Listen to last answer">
-                                <span class="material-symbols-outlined">volume_up</span>
+                            <!-- Speak last answer -->
+                            <button id="speak-last-btn" onclick="speakLastAnswer()" class="chat-action-btn" title="Listen to last answer" aria-label="Speak answer">
+                                <span class="material-symbols-outlined" style="font-size:22px;">volume_up</span>
                             </button>
-                            <input id="actualChatInput" class="chat-input-field flex-1 h-14 pl-6 pr-16 bg-white rounded-2xl border border-slate-200 outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10 text-base shadow-sm font-label transition-all" placeholder="यहाँ अपना सवाल लिखें..." type="text" onkeypress="if(event.key === 'Enter') { triggerRAGAPI(this.value); this.value=''; }"/>
-                            <select id="chat-mode-select" class="h-14 px-3 rounded-xl border border-slate-200 text-sm font-semibold text-slate-700 bg-white" onchange="window.currentMode = this.value">
+                            <!-- Main text input -->
+                            <input id="actualChatInput" class="chat-text-input chat-input-field font-label" placeholder="यहाँ अपना सवाल लिखें..." type="text" onkeypress="if(event.key==='Enter'){triggerRAGAPI(this.value);this.value='';}" aria-label="Chat input"/>
+                            <!-- Mode selector -->
+                            <select id="chat-mode-select" class="chat-mode-select" onchange="window.currentMode=this.value" aria-label="Chat mode">
                                 <option value="citizen">Citizen</option>
                                 <option value="worker">Worker</option>
                                 <option value="explorer">Explorer</option>
                             </select>
-                            <button onclick="triggerRAGAPI(document.getElementById('actualChatInput').value); document.getElementById('actualChatInput').value='';" class="absolute right-3 top-3 bottom-3 w-10 bg-primary rounded-xl text-white flex items-center justify-center hover:bg-primary-container hover:scale-105 transition-all shadow-md">
-                                <span class="material-symbols-outlined text-lg">send</span>
+                            <!-- Send button — no longer absolute, sits inline -->
+                            <button id="chat-send-btn" onclick="triggerRAGAPI(document.getElementById('actualChatInput').value); document.getElementById('actualChatInput').value='';" class="chat-send-btn" aria-label="Send message" title="Send">
+                                <span class="material-symbols-outlined" style="font-size:22px;">send</span>
                             </button>
                         </div>
-                        <div class="flex justify-center mt-4 text-xs text-slate-400 gap-6">
-                            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">lock</span> Encrypted specific to your profile</span>
-                            <span class="flex items-center gap-1 cursor-pointer hover:text-primary"><span class="material-symbols-outlined text-[14px]">mic</span> English / हिंदी Voice input</span>
+                        <div class="flex justify-center mt-3 text-xs text-slate-400 gap-6">
+                            <span class="flex items-center gap-1.5"><span class="material-symbols-outlined" style="font-size:13px;">lock</span> Encrypted specific to your profile</span>
+                            <span class="flex items-center gap-1.5 cursor-pointer hover:text-primary transition-colors"><span class="material-symbols-outlined" style="font-size:13px;">mic</span> English / हिंदी Voice input</span>
                         </div>
                     </div>
                 </div>
@@ -682,6 +1059,27 @@ html_content = """<!DOCTYPE html>
                     </div>
                 </div>
 
+                <!-- Create Event CTA -->
+                <div class="bg-gradient-to-r from-[#00003c] to-[#000080] p-8 rounded-[2rem] premium-shadow border border-blue-900/20 flex flex-col md:flex-row items-center justify-between gap-6">
+                    <div class="flex items-center gap-5">
+                        <div class="w-14 h-14 bg-white/10 rounded-2xl flex items-center justify-center flex-shrink-0">
+                            <span class="material-symbols-outlined text-white text-3xl" style="font-variation-settings: 'FILL' 1;">volunteer_activism</span>
+                        </div>
+                        <div>
+                            <h4 class="text-xl font-bold text-white">Want to Create a Community Event?</h4>
+                            <p class="text-blue-200 text-sm mt-1">Register your NGO or organization to host and manage events for citizens.</p>
+                        </div>
+                    </div>
+                    <button
+                        id="profile-create-event-btn"
+                        onclick="switchTab('events')"
+                        class="flex-shrink-0 flex items-center gap-2 px-8 py-4 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-2xl transition-all shadow-lg shadow-orange-500/30 hover:shadow-orange-500/50 hover:-translate-y-0.5 transform text-sm font-['Plus_Jakarta_Sans']"
+                    >
+                        <span class="material-symbols-outlined text-lg">add_circle</span>
+                        Create Event
+                    </button>
+                </div>
+
                 <div id="org-admin-panel" class="bg-white p-8 rounded-[2rem] premium-shadow border border-slate-100 hidden-view">
                     <div class="flex items-center justify-between gap-4 border-b pb-4 mb-6">
                         <div>
@@ -701,6 +1099,125 @@ html_content = """<!DOCTYPE html>
                     <div class="flex gap-3 mt-5">
                         <button onclick="createOrgEvent()" class="px-6 py-3 rounded-xl bg-primary text-white font-bold text-sm hover:bg-primary-container">Create Event</button>
                         <button onclick="openAuth('org-login')" class="px-6 py-3 rounded-xl border border-slate-300 text-slate-700 font-bold text-sm hover:bg-slate-50">Admin Login</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= VIEW: ORG PROFILE ================= -->
+            <div id="view-org-profile" class="view-section hidden-view flex flex-col gap-8">
+                <div class="flex items-center justify-between flex-wrap gap-4">
+                    <h2 class="text-4xl font-extrabold font-headline text-primary flex items-center gap-3">
+                        <span class="material-symbols-outlined text-4xl" style="font-variation-settings: 'FILL' 1;">admin_panel_settings</span>
+                        Organization Dashboard
+                    </h2>
+                    <button onclick="openCreateEventModal()" class="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold rounded-2xl text-sm hover:from-orange-600 hover:to-orange-700 transition-all shadow-lg shadow-orange-500/30 hover:-translate-y-0.5 transform font-['Plus_Jakarta_Sans']">
+                        <span class="material-symbols-outlined text-lg">add_circle</span>
+                        Create Event
+                    </button>
+                </div>
+                <div class="grid md:grid-cols-3 gap-8">
+                    <div class="col-span-1 bg-white p-8 rounded-[2rem] premium-shadow border border-slate-100 flex flex-col items-center text-center gap-4">
+                        <div class="w-24 h-24 rounded-2xl bg-gradient-to-br from-primary to-primary-container flex items-center justify-center">
+                            <span class="material-symbols-outlined text-white text-5xl" style="font-variation-settings: 'FILL' 1;">corporate_fare</span>
+                        </div>
+                        <div>
+                            <h3 id="org-profile-name" class="font-black text-2xl text-primary mt-2">Organization</h3>
+                            <p id="org-profile-email" class="text-on-surface-variant text-sm mt-1">—</p>
+                        </div>
+                        <div class="flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-full text-sm font-bold">
+                            <span class="material-symbols-outlined text-base" style="font-variation-settings: 'FILL' 1;">verified</span>
+                            Verified Organization
+                        </div>
+                    </div>
+                    <div class="col-span-2 bg-white p-8 rounded-[2rem] premium-shadow border border-slate-100">
+                        <h4 class="text-xl font-bold border-b pb-4 mb-6">Organization Details</h4>
+                        <div class="grid grid-cols-2 gap-y-6 gap-x-12">
+                            <div>
+                                <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Organization Name</p>
+                                <p id="org-detail-name" class="font-bold text-primary">—</p>
+                            </div>
+                            <div>
+                                <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Category</p>
+                                <p id="org-detail-category" class="font-bold text-primary">—</p>
+                            </div>
+                            <div>
+                                <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Location</p>
+                                <p id="org-detail-location" class="font-bold text-primary">—</p>
+                            </div>
+                            <div>
+                                <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Email</p>
+                                <p id="org-detail-email" class="font-bold text-primary">—</p>
+                            </div>
+                            <div>
+                                <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Status</p>
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold">
+                                    <span class="material-symbols-outlined text-sm" style="font-variation-settings:'FILL' 1;">check_circle</span>Verified
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white p-8 rounded-[2rem] premium-shadow border border-slate-100">
+                    <div class="flex items-center justify-between mb-6 border-b pb-4">
+                        <h4 class="text-xl font-bold">My Events</h4>
+                        <button onclick="loadOrgEvents()" class="text-sm text-primary font-bold hover:underline flex items-center gap-1">
+                            <span class="material-symbols-outlined text-base">refresh</span>Refresh
+                        </button>
+                    </div>
+                    <div id="org-events-list" class="flex flex-col gap-4">
+                        <p class="text-slate-400 text-sm">No events yet. Click "Create Event" to add one!</p>
+                    </div>
+                </div>
+                <div class="flex justify-end">
+                    <button onclick="orgLogout()" class="flex items-center gap-2 px-5 py-2.5 border border-red-200 text-red-600 rounded-xl font-bold text-sm hover:bg-red-50 transition-all">
+                        <span class="material-symbols-outlined text-base">logout</span>
+                        Logout Organization
+                    </button>
+                </div>
+            </div>
+
+            <!-- ================= CREATE EVENT MODAL ================= -->
+            <div id="create-event-modal" class="fixed inset-0 z-[150] items-center justify-center" style="display:none;">
+                <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeCreateEventModal()"></div>
+                <div class="relative z-10 w-full max-w-lg mx-auto mt-20 bg-white rounded-3xl shadow-2xl p-8 flex flex-col gap-6">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-2xl font-black text-primary">Create New Event</h3>
+                        <button onclick="closeCreateEventModal()" class="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-all">
+                            <span class="material-symbols-outlined text-slate-600">close</span>
+                        </button>
+                    </div>
+                    <div class="flex flex-col gap-4">
+                        <div>
+                            <label class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1 block">Event Name *</label>
+                            <input id="modal-event-title" type="text" placeholder="e.g., Free Healthcare Camp" class="w-full h-12 px-4 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-200 text-sm font-['Plus_Jakarta_Sans']"/>
+                        </div>
+                        <div>
+                            <label class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1 block">Description *</label>
+                            <textarea id="modal-event-description" placeholder="Describe what the event is about..." class="w-full min-h-24 px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-200 text-sm font-['Plus_Jakarta_Sans'] resize-none"></textarea>
+                        </div>
+                        <div>
+                            <label class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1 block">Location *</label>
+                            <input id="modal-event-location" type="text" placeholder="City / Area" class="w-full h-12 px-4 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-200 text-sm font-['Plus_Jakarta_Sans']"/>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1 block">Start Date</label>
+                                <input id="modal-event-start" type="date" class="w-full h-12 px-4 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-200 text-sm font-['Plus_Jakarta_Sans']"/>
+                            </div>
+                            <div>
+                                <label class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1 block">End Date</label>
+                                <input id="modal-event-end" type="date" class="w-full h-12 px-4 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-200 text-sm font-['Plus_Jakarta_Sans']"/>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex gap-3 pt-2">
+                        <button onclick="submitCreateEvent()" id="modal-submit-btn" class="flex-1 h-12 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl font-bold text-sm hover:from-orange-600 hover:to-orange-700 transition-all shadow-lg shadow-orange-500/30 flex items-center justify-center gap-2 font-['Plus_Jakarta_Sans']">
+                            <span class="material-symbols-outlined text-lg">add_circle</span>
+                            Create Event
+                        </button>
+                        <button onclick="closeCreateEventModal()" class="px-6 h-12 border border-slate-200 text-slate-700 rounded-xl font-bold text-sm hover:bg-slate-50 transition-all font-['Plus_Jakarta_Sans']">
+                            Cancel
+                        </button>
                     </div>
                 </div>
             </div>
@@ -843,15 +1360,20 @@ html_content = """<!DOCTYPE html>
                             playTTS(text, buttonEl);
                         }
                 // Fetch and render NGOs for Home and Schemes
-                async function fetchAndRenderNGOs(targetId, limit = 6) {
+                async function fetchAndRenderNGOs(targetId, limit = 10) {
                     const container = document.getElementById(targetId);
                     if (!container) return;
                     container.innerHTML = `<span class='text-slate-400'>${window.currentLanguage === 'hindi' ? 'एनजीओ लोड हो रहे हैं...' : window.currentLanguage === 'hinglish' ? 'NGO load ho rahe hain...' : 'Loading NGOs...'}</span>`;
+
+                    // Pass the user's state/location to filter NGOs near them
+                    const u = window.currentUser || {};
+                    const location = encodeURIComponent(u.state || u.location || 'Rajasthan');
+                    const category = encodeURIComponent(u.category || '');
+
                     try {
-                        const response = await fetch('/api/ngos');
+                        const response = await fetch(`/api/ngos?location=${location}&category=${category}&limit=${limit}`);
                         const data = await response.json();
                         let ngos = data.ngos || [];
-                        if (limit) ngos = ngos.slice(0, limit);
                         if (ngos.length === 0) {
                             container.innerHTML = `<span class='text-slate-400'>${window.currentLanguage === 'hindi' ? 'कोई एनजीओ नहीं मिला।' : window.currentLanguage === 'hinglish' ? 'Koi NGO nahi mila.' : 'No NGOs found.'}</span>`;
                             return;
@@ -996,7 +1518,7 @@ html_content = """<!DOCTYPE html>
 
             // Hide footer if inside chat for immersive feel
             const footer = document.getElementById('main-footer');
-            if (tabId === 'chat' || tabId === 'applications') {
+            if (tabId === 'chat' || tabId === 'applications' || tabId === 'org-profile') {
                 footer.style.display = 'none';
             } else {
                 footer.style.display = 'grid';
@@ -1047,6 +1569,7 @@ html_content = """<!DOCTYPE html>
         window.preloaderHideRequested = false;
         window.preloaderMinMs = 3000;
         window.chatSessionId = localStorage.getItem('sahara_chat_session_id') || '';
+        window.isSidebarCollapsed = false;
 
         const UI_TEXT = {
             english: {
@@ -1249,11 +1772,6 @@ html_content = """<!DOCTYPE html>
                 langLabel.textContent = window.currentLanguage === 'english' ? 'English | हिंदी' : window.currentLanguage === 'hindi' ? 'हिंदी' : 'Hinglish | हिंदी';
             }
 
-            const menuLabel = document.getElementById('side-menu-label');
-            if (menuLabel) {
-                menuLabel.textContent = translateValue('Menu', window.currentLanguage);
-            }
-
             const menuGuide = document.getElementById('menu-guide-text');
             if (menuGuide) {
                 menuGuide.textContent = translateValue('Use side menu to navigate', window.currentLanguage);
@@ -1261,7 +1779,7 @@ html_content = """<!DOCTYPE html>
 
             // Re-render NGO sections in selected language
             fetchAndRenderNGOs('dashboard-ngo-cards', 3);
-            fetchAndRenderNGOs('explore-ngo-cards', 0);
+                fetchAndRenderNGOs('explore-ngo-cards', 10);
             fetchAndRenderEvents();
         }
 
@@ -1272,19 +1790,26 @@ html_content = """<!DOCTYPE html>
             applyPageLanguage();
         }
 
-        function toggleSideMenu() {
-            const menu = document.getElementById('side-menu-items');
-            const icon = document.getElementById('side-menu-chevron');
-            if (!menu || !icon) return;
-            const isHidden = menu.classList.contains('hidden-view');
-            if (isHidden) {
-                menu.classList.remove('hidden-view');
-                menu.classList.add('flex');
-                icon.textContent = 'expand_less';
-            } else {
-                menu.classList.add('hidden-view');
-                menu.classList.remove('flex');
-                icon.textContent = 'expand_more';
+        function setSidebarCollapsed(collapsed) {
+            const sidebar = document.getElementById('main-sidebar');
+            const mainContent = document.getElementById('main-content');
+            if (!sidebar || !mainContent) return;
+            sidebar.classList.toggle('sidebar-collapsed', collapsed);
+            mainContent.classList.toggle('sidebar-collapsed', collapsed);
+            window.isSidebarCollapsed = collapsed;
+        }
+
+        function toggleSidebar(event) {
+            if (event) event.stopPropagation();
+            setSidebarCollapsed(!window.isSidebarCollapsed);
+        }
+
+        function handleOutsideSidebarClick(event) {
+            const sidebar = document.getElementById('main-sidebar');
+            if (!sidebar) return;
+            if (window.isSidebarCollapsed) return;
+            if (!sidebar.contains(event.target)) {
+                setSidebarCollapsed(true);
             }
         }
 
@@ -1298,7 +1823,7 @@ html_content = """<!DOCTYPE html>
             const orgSubtitle = document.getElementById('org-admin-subtitle');
 
             if (guestActions) {
-                guestActions.style.display = isLoggedIn ? 'none' : 'flex';
+                guestActions.style.display = (isLoggedIn || isOrgLoggedIn) ? 'none' : 'flex';
             }
 
             if (userProfileAction) {
@@ -1326,6 +1851,12 @@ html_content = """<!DOCTYPE html>
                         orgSubtitle.textContent = 'Login as organization admin to create events.';
                     }
                 }
+            }
+
+            // Show/hide org dashboard nav item
+            const orgNavItem = document.getElementById('org-nav-item');
+            if (orgNavItem) {
+                orgNavItem.style.display = isOrgLoggedIn ? '' : 'none';
             }
         }
 
@@ -1373,7 +1904,7 @@ html_content = """<!DOCTYPE html>
         document.addEventListener("DOMContentLoaded", () => {
             fetchAndRenderSchemes(1);
             fetchAndRenderNGOs('dashboard-ngo-cards', 3);
-            fetchAndRenderNGOs('explore-ngo-cards', 0);
+                fetchAndRenderNGOs('explore-ngo-cards', 10);
             fetchAndRenderEvents();
             captureTextNodes();
             applyPageLanguage();
@@ -1382,6 +1913,8 @@ html_content = """<!DOCTYPE html>
             updateAuthUI();
             tryAutoLogin();
             tryAutoOrgLogin();
+            setSidebarCollapsed(false);
+            document.addEventListener('click', handleOutsideSidebarClick);
 
             const preloaderVideo = document.getElementById('preloader-video');
             if (preloaderVideo) {
@@ -1547,6 +2080,8 @@ html_content = """<!DOCTYPE html>
                 if (data.ok && data.org) {
                     window.currentOrg = data.org;
                     updateAuthUI();
+                    fillOrgProfileUI(data.org);
+                    loadOrgEvents();
                 } else {
                     localStorage.removeItem('sahara_org_auth_token');
                     window.orgAuthToken = '';
@@ -1562,35 +2097,52 @@ html_content = """<!DOCTYPE html>
         }
 
         // ---------------- SCHEMES FETCH LOGIC ----------------
-        
+
+        function getProfileLocation() {
+            const u = window.currentUser || {};
+            return (u.state || u.location || 'Rajasthan').trim();
+        }
+        function getProfileCategory() {
+            const u = window.currentUser || {};
+            return (u.category || '').trim();
+        }
+
         async function fetchAndRenderSchemes(page) {
             const grid = document.getElementById('schemes-grid-full');
             const btn1 = document.getElementById('btn-page-1');
             const btn2 = document.getElementById('btn-page-2');
-            
+
             // Show loading
             grid.innerHTML = `
                 <div class="col-span-full py-20 flex flex-col items-center justify-center text-slate-400 gap-4">
                     <span class="material-symbols-outlined animate-spin text-4xl">sync</span>
-                    <p class="font-bold">${window.currentLanguage === 'hindi' ? `पेज ${page} की योजनाएं लोड हो रही हैं...` : window.currentLanguage === 'hinglish' ? `Page ${page} ki schemes load ho rahi hain...` : `Fetching schemes for Page ${page}...`}</p>
+                    <p class="font-bold">${window.currentLanguage === 'hindi' ? `आपके लिए योजनाएं लोड हो रही हैं...` : window.currentLanguage === 'hinglish' ? `Aapke liye schemes load ho rahi hain...` : `Loading schemes for you...`}</p>
                 </div>
             `;
-            
+
             // Update button styles
-            if(page === 1) {
-                btn1.className = "px-6 py-2 rounded-lg text-sm font-bold transition-all bg-primary text-white";
-                btn2.className = "px-6 py-2 rounded-lg text-sm font-bold transition-all text-slate-500 hover:bg-slate-50";
+            if (page === 1) {
+                if (btn1) btn1.className = "px-6 py-2 rounded-lg text-sm font-bold transition-all bg-primary text-white";
+                if (btn2) btn2.className = "px-6 py-2 rounded-lg text-sm font-bold transition-all text-slate-500 hover:bg-slate-50";
             } else {
-                btn1.className = "px-6 py-2 rounded-lg text-sm font-bold transition-all text-slate-500 hover:bg-slate-50";
-                btn2.className = "px-6 py-2 rounded-lg text-sm font-bold transition-all bg-primary text-white";
+                if (btn1) btn1.className = "px-6 py-2 rounded-lg text-sm font-bold transition-all text-slate-500 hover:bg-slate-50";
+                if (btn2) btn2.className = "px-6 py-2 rounded-lg text-sm font-bold transition-all bg-primary text-white";
             }
 
+            const state = encodeURIComponent(getProfileLocation());
+            const category = encodeURIComponent(getProfileCategory());
+
             try {
-                const response = await fetch(`/api/schemes?page=${page}&limit=50`);
+                const response = await fetch(`/api/schemes?page=${page}&limit=10&state=${state}&category=${category}`);
                 const data = await response.json();
-                
+
                 grid.innerHTML = '';
-                if(data.schemes && data.schemes.length > 0) {
+                if (data.schemes && data.schemes.length > 0) {
+                    // Show location context
+                    const locLabel = getProfileLocation();
+                    grid.innerHTML = `<p class="col-span-full text-sm font-bold text-slate-500 mb-2">
+                        📍 Showing schemes relevant to <span class="text-primary">${locLabel}</span> — ${data.schemes.length} of ${data.total} found
+                    </p>`;
                     data.schemes.forEach(scheme => {
                         grid.innerHTML += createSchemeCard(scheme);
                     });
@@ -1628,6 +2180,119 @@ html_content = """<!DOCTYPE html>
             `;
         }
         // ---------------- RAG CHAT LOGIC ----------------
+
+        function escapeHtml(value) {
+            return String(value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function emphasizeAmounts(rawText) {
+            const text = String(rawText || '');
+            const amountPattern = /(₹\s?\d[\d,]*(?:\.\d+)?|Rs\.?\s?\d[\d,]*(?:\.\d+)?|INR\s?\d[\d,]*(?:\.\d+)?)/gi;
+            return text.replace(amountPattern, '<span class="amount-highlight">$1</span>');
+        }
+
+        function parseMarkers(text) {
+            let processed = text;
+
+            // --- SCHEME CARDS ---
+            // Use [\/\S\s] trick to match across newlines in older browsers too
+            processed = processed.replace(/:::SCHEME_CARD([\/\S\s]*?):::/g, (match, content) => {
+                const data = {};
+                content.trim().split('\n').forEach(line => {
+                    const colon = line.indexOf(':');
+                    if (colon > 0) {
+                        const key = line.slice(0, colon).trim().toLowerCase();
+                        const val = line.slice(colon + 1).trim();
+                        data[key] = val;
+                    }
+                });
+                const schemeName = (data.name || 'Scheme').replace(/'/g, "&#39;");
+                const link = data.link || '#';
+                const deadline = data.deadline || 'Apply Soon';
+                const benefits = data.benefits || 'N/A';
+                // Build amounts inline
+                const benefitsHtml = benefits.replace(/(\u20b9\s?\d[\d,]*(?:\.\d+)?|Rs\.?\s?\d[\d,]*(?:\.\d+)?)/gi, '<span class="amount-highlight">$1</span>');
+
+                return `<div class="rich-card scheme-card">
+  <div class="rich-card-badge">🏛️ Government Scheme</div>
+  <div class="rich-card-title">${data.name || 'Scheme Name'}</div>
+  <div class="rich-card-detail"><span class="detail-label">👤 Who can apply:</span><span>${data.who || 'N/A'}</span></div>
+  <div class="rich-card-detail"><span class="detail-label">💰 Benefits:</span><span>${benefitsHtml}</span></div>
+  <div class="rich-card-detail"><span class="detail-label">📄 Documents:</span><span>${data.documents || 'N/A'}</span></div>
+  <div class="rich-card-detail deadline-row"><span class="detail-label">⏰ Deadline:</span><span class="deadline-badge">${deadline}</span></div>
+  <div class="rich-card-actions">
+    <a href="${link}" target="_blank" rel="noopener noreferrer" class="rich-card-btn btn-primary-card">Apply Now →</a>
+    <a href="${link}" target="_blank" rel="noopener noreferrer" class="rich-card-btn btn-secondary-card">View Details</a>
+  </div>
+</div>`;
+            });
+
+            // --- NGO CARDS ---
+            processed = processed.replace(/:::NGO_CARD([\/\S\s]*?):::/g, (match, content) => {
+                const data = {};
+                content.trim().split('\n').forEach(line => {
+                    const colon = line.indexOf(':');
+                    if (colon > 0) {
+                        const key = line.slice(0, colon).trim().toLowerCase();
+                        const val = line.slice(colon + 1).trim();
+                        data[key] = val;
+                    }
+                });
+                const contact = data.contact || '';
+                const contactHtml = contact.startsWith('http')
+                    ? `<a href="${contact}" target="_blank" rel="noopener noreferrer">${contact}</a>`
+                    : contact;
+
+                return `<div class="rich-card ngo-card">
+  <div class="rich-card-badge ngo-badge">🤝 Help Center / NGO</div>
+  <div class="rich-card-title ngo-title">${data.name || 'NGO'}</div>
+  <div class="rich-card-detail"><span class="detail-label">🆘 Help offered:</span><span>${data.help || 'N/A'}</span></div>
+  <div class="rich-card-detail"><span class="detail-label">📍 Location:</span><span>${data.location || 'N/A'}</span></div>
+  <div class="rich-card-detail"><span class="detail-label">📞 Contact:</span><span>${contactHtml}</span></div>
+</div>`;
+            });
+
+            return processed;
+        }
+
+        function renderAssistantMarkdown(rawText) {
+            const fallback = escapeHtml(rawText).replace(/\n/g, '<br/>');
+            if (!window.marked || !window.DOMPurify) return fallback;
+
+            marked.setOptions({
+                gfm: true,
+                breaks: true,
+                headerIds: false,
+                mangle: false
+            });
+
+            // Parse custom card markers FIRST, before marked.parse()
+            // so they arrive as raw HTML and marked doesn't touch them
+            const withCards = parseMarkers(rawText);
+            const enriched = emphasizeAmounts(withCards);
+            const parsed = marked.parse(enriched);
+            const safeHtml = DOMPurify.sanitize(parsed, {
+                USE_PROFILES: { html: true },
+                ADD_TAGS: ['div', 'span', 'a', 'b', 'input'],
+                ADD_ATTR: ['target', 'rel', 'class', 'href', 'checked', 'disabled', 'type']
+            });
+
+            const container = document.createElement('div');
+            container.innerHTML = safeHtml;
+            container.querySelectorAll('a').forEach(link => {
+                link.setAttribute('target', '_blank');
+                link.setAttribute('rel', 'noopener noreferrer');
+            });
+            container.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+                checkbox.disabled = true;
+            });
+            return container.innerHTML;
+        }
         
         // Append to all boxes so user can see chat in mini view and full view
         function appendUserMessage(text) {
@@ -1637,7 +2302,7 @@ html_content = """<!DOCTYPE html>
                 wrapper.className = "flex flex-col items-end gap-2 my-2 w-full";
                 wrapper.innerHTML = `
                     <div class="bg-primary text-white p-4 rounded-2xl rounded-tr-none text-sm leading-relaxed shadow-md w-fit max-w-[90%]">
-                        ${text}
+                        ${escapeHtml(text)}
                     </div>
                 `;
                 box.appendChild(wrapper);
@@ -1654,13 +2319,11 @@ html_content = """<!DOCTYPE html>
             boxes.forEach(box => {
                 const wrapper = document.createElement("div");
                 wrapper.className = "flex flex-col gap-2 max-w-[90%] my-2 w-full";
-                
-                // Format markdown numbering and newlines
-                const formattedText = text.replace(/\\n/g, "<br/>").replace(/(\\d+\\.)/g, "<strong>$1</strong>");
+                const renderedMarkdown = renderAssistantMarkdown(text);
                 
                 wrapper.innerHTML = `
-                    <div class="bg-white border border-slate-100 p-4 rounded-2xl rounded-tl-none text-sm text-on-surface leading-relaxed shadow-sm">
-                        ${formattedText}
+                    <div class="bg-white border border-slate-100 p-5 rounded-2xl rounded-tl-none text-on-surface shadow-sm ai-markdown">
+                        ${renderedMarkdown}
                     </div>
                     <button onclick="speakMessageById('${messageId}', this)" class="self-start mt-1 px-3 py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:text-primary hover:bg-slate-50 text-xs font-semibold flex items-center gap-1.5 transition-all" title="Speak this response">
                         <span class="material-symbols-outlined text-sm">volume_up</span>
@@ -1726,23 +2389,23 @@ html_content = """<!DOCTYPE html>
                         const citationText = data.citations
                             .slice(0, 5)
                             .map(c => `[${c.id}] ${c.source_name} (${c.source_type})`)
-                            .join('<br/>');
-                        appendBotMessage(`<b>Sources</b><br/>${citationText}`);
+                            .join('\n');
+                        appendBotMessage(`### Sources\n${citationText}`);
                     }
 
                     if (Array.isArray(data.follow_up_questions) && data.follow_up_questions.length) {
                         const followText = data.follow_up_questions
                             .map((q, idx) => `${idx + 1}. ${q}`)
-                            .join('<br/>');
-                        appendBotMessage(`<b>To personalize better, please share:</b><br/>${followText}`);
+                            .join('\n');
+                        appendBotMessage(`### To Personalize Better, Please Share\n${followText}`);
                     }
 
                     if (data.worker_summary) {
-                        appendBotMessage(`<b>Worker Mode Summary</b><br/>${String(data.worker_summary).replace(/\\n/g, '<br/>')}`);
+                        appendBotMessage(`### Worker Mode Summary\n${String(data.worker_summary)}`);
                     }
 
                     if (data.understanding_check) {
-                        appendBotMessage(`<b>Confirmation</b><br/>${data.understanding_check}`);
+                        appendBotMessage(`### Confirmation\n${data.understanding_check}`);
                     }
                 } else {
                     appendBotMessage(t('askError'));
@@ -2044,14 +2707,14 @@ html_content = """<!DOCTYPE html>
             document.getElementById('org-login-form').style.display = 'block';
         }
         async function handleLogin() {
-            const id = document.getElementById('login-id').value;
+            const email = document.getElementById('login-id').value.trim();
             const pass = document.getElementById('login-pass').value;
-            if (!id || !pass) { showToast(t('fillFields'), 'error'); return; }
+            if (!email || !pass) { showToast(t('fillFields'), 'error'); return; }
             try {
                 const res = await fetch('/api/auth/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ identifier: id, password: pass })
+                    body: JSON.stringify({ email: email, password: pass })
                 });
                 const data = await res.json();
                 if (!data.ok) {
@@ -2063,25 +2726,46 @@ html_content = """<!DOCTYPE html>
                     localStorage.setItem('sahara_auth_token', window.authToken);
                 }
                 applyUserProfile(data.user || {});
-                completeAuth((data.user && data.user.full_name) || id);
+                completeAuth((data.user && data.user.full_name) || email);
                 loadBookmarks();
                 showToast('Login successful.', 'success');
             } catch (e) {
                 showToast('Login error. Please try again.', 'error');
             }
         }
+        function checkPasswordStrength(val) {
+            const bars = [1,2,3,4].map(i => document.getElementById('ps-bar-'+i));
+            const hint = document.getElementById('ps-hint');
+            if (!hint) return;
+            let score = 0;
+            if (val.length >= 8) score++;
+            if (/[A-Z]/.test(val)) score++;
+            if (/[0-9]/.test(val)) score++;
+            if (/[^A-Za-z0-9]/.test(val)) score++;
+            const colors = ['bg-red-400', 'bg-orange-400', 'bg-yellow-400', 'bg-green-400'];
+            const labels = ['Too weak', 'Weak', 'Good', 'Strong ✓'];
+            bars.forEach((b, i) => {
+                b.className = 'h-1 flex-1 rounded-full transition-all duration-300 ' + (i < score ? colors[score-1] : 'bg-white/20');
+            });
+            hint.textContent = score === 0 ? 'Min 8 chars · uppercase · number · special char' : labels[score-1];
+        }
         async function handleSignup() {
-            const name = document.getElementById('signup-name').value;
-            const id = document.getElementById('signup-id').value;
+            const name = document.getElementById('signup-name').value.trim();
+            const email = document.getElementById('signup-email').value.trim();
             const pass = document.getElementById('signup-pass').value;
             const state = document.getElementById('signup-state').value || '';
             const category = document.getElementById('signup-category').value || '';
-            if (!name || !id || !pass) { showToast(t('fillFields'), 'error'); return; }
+            if (!name || !email || !pass) { showToast(t('fillFields'), 'error'); return; }
+            // Strong password enforcement
+            if (pass.length < 8) { showToast('Password must be at least 8 characters.', 'error'); return; }
+            if (!/[A-Z]/.test(pass)) { showToast('Password needs at least one uppercase letter.', 'error'); return; }
+            if (!/[0-9]/.test(pass)) { showToast('Password needs at least one number.', 'error'); return; }
+            if (!/[^A-Za-z0-9]/.test(pass)) { showToast('Password needs at least one special character.', 'error'); return; }
             try {
                 const signupRes = await fetch('/api/auth/signup', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ full_name: name, identifier: id, password: pass, state, category })
+                    body: JSON.stringify({ full_name: name, email: email, password: pass, state, category })
                 });
                 const signupData = await signupRes.json();
                 if (!signupData.ok) {
@@ -2092,11 +2776,11 @@ html_content = """<!DOCTYPE html>
                 const loginRes = await fetch('/api/auth/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ identifier: id, password: pass })
+                    body: JSON.stringify({ email: email, password: pass })
                 });
                 const loginData = await loginRes.json();
                 if (!loginData.ok) {
-                    showToast('Signup done, please login once.', 'info');
+                    showToast('Account created! Please login.', 'info');
                     showLogin();
                     return;
                 }
@@ -2108,7 +2792,7 @@ html_content = """<!DOCTYPE html>
                 applyUserProfile(loginData.user || {});
                 completeAuth((loginData.user && loginData.user.full_name) || name);
                 loadBookmarks();
-                showToast('Signup successful.', 'success');
+                showToast('Account created successfully!', 'success');
             } catch (e) {
                 showToast('Signup error. Please try again.', 'error');
             }
@@ -2135,9 +2819,15 @@ html_content = """<!DOCTYPE html>
                     localStorage.setItem('sahara_org_auth_token', window.orgAuthToken);
                 }
                 showToast('Organization admin login successful.', 'success');
-                completeAuth((window.currentUser && window.currentUser.full_name) || 'Citizen');
+                // Sync org to ngo_data.csv
+                try {
+                    await fetch('/api/org/sync-csv', { method: 'POST', headers: getOrgAuthHeaders() });
+                } catch(_) {}
+                hideAuthOverlay();
                 updateAuthUI();
-                switchTab('profile');
+                fillOrgProfileUI(data.org || {});
+                loadOrgEvents();
+                switchTab('org-profile');
             } catch (_) {
                 showToast('Organization login error. Please try again.', 'error');
             }
@@ -2184,7 +2874,7 @@ html_content = """<!DOCTYPE html>
                     if (el) el.value = '';
                 });
                 fetchAndRenderNGOs('dashboard-ngo-cards', 3);
-                fetchAndRenderNGOs('explore-ngo-cards', 0);
+                    fetchAndRenderNGOs('explore-ngo-cards', 10);
                 fetchAndRenderEvents();
             } catch (_) {
                 showToast('Event creation failed.', 'error');
@@ -2196,6 +2886,7 @@ html_content = """<!DOCTYPE html>
                 window.currentDisplayName = userName;
             }
             const authScreen = document.getElementById('auth-screen');
+            const targetTab = window.orgAuthToken ? 'org-profile' : 'profile';
             if (authScreen && authScreen.style.display !== 'none') {
                 authScreen.style.transition = 'opacity 0.5s, transform 0.5s';
                 authScreen.style.opacity = '0';
@@ -2206,14 +2897,134 @@ html_content = """<!DOCTYPE html>
                     authScreen.style.transform = 'scale(1)';
                     updateAuthUI();
                     refreshPersonalizedUI();
-                    switchTab('home');
+                    switchTab(targetTab);
                 }, 500);
                 return;
             }
 
             updateAuthUI();
             refreshPersonalizedUI();
+            switchTab(targetTab);
+        }
+
+        // ── ORG PROFILE FUNCTIONS ──────────────────────────────────────────
+        function fillOrgProfileUI(org) {
+            const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val || '—'; };
+            set('org-profile-name', org.name);
+            set('org-profile-email', org.email);
+            set('org-detail-name', org.name);
+            set('org-detail-category', org.category);
+            set('org-detail-location', org.location);
+            set('org-detail-email', org.email);
+        }
+
+        async function loadOrgEvents() {
+            if (!window.orgAuthToken) return;
+            const list = document.getElementById('org-events-list');
+            if (list) list.innerHTML = '<p class="text-slate-400 text-sm">Loading...</p>';
+            try {
+                const res = await fetch('/api/org/my-events', { headers: getOrgAuthHeaders() });
+                const data = await res.json();
+                if (!data.ok || !data.events || data.events.length === 0) {
+                    if (list) list.innerHTML = '<p class="text-slate-400 text-sm">No events yet. Click "Create Event" to add your first event!</p>';
+                    return;
+                }
+                if (list) {
+                    list.innerHTML = data.events.map(ev => `
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl border border-slate-100 hover:border-blue-200 hover:bg-blue-50/30 transition-all">
+                            <div class="flex items-start gap-4">
+                                <div class="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center flex-shrink-0">
+                                    <span class="material-symbols-outlined text-orange-500" style="font-size:20px;font-variation-settings:'FILL' 1;">event</span>
+                                </div>
+                                <div>
+                                    <p class="font-bold text-primary">${ev.title}</p>
+                                    <p class="text-sm text-slate-500 mt-0.5">${ev.description}</p>
+                                    <div class="flex items-center gap-3 mt-1.5">
+                                        ${ev.location ? `<span class="text-xs text-slate-400 flex items-center gap-1"><span class="material-symbols-outlined" style="font-size:13px;">location_on</span>${ev.location}</span>` : ''}
+                                        ${ev.start_date ? `<span class="text-xs text-slate-400 flex items-center gap-1"><span class="material-symbols-outlined" style="font-size:13px;">calendar_today</span>${ev.start_date}${ev.end_date ? ' → ' + ev.end_date : ''}</span>` : ''}
+                                        ${ev.category ? `<span class="text-xs px-2 py-0.5 bg-orange-50 text-orange-600 rounded-full font-bold">${ev.category}</span>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                            <span class="text-xs px-3 py-1 rounded-full font-bold ${ev.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}">${ev.status || 'active'}</span>
+                        </div>
+                    `).join('');
+                }
+            } catch(e) {
+                if (list) list.innerHTML = '<p class="text-red-400 text-sm">Could not load events.</p>';
+            }
+        }
+
+        function openCreateEventModal() {
+            if (!window.orgAuthToken) {
+                showToast('Please login as organization admin first.', 'error');
+                openAuth('org-login');
+                return;
+            }
+            const modal = document.getElementById('create-event-modal');
+            if (modal) modal.style.display = 'flex';
+            // Clear form
+            ['modal-event-title','modal-event-description','modal-event-location','modal-event-start','modal-event-end'].forEach(id => {
+                const el = document.getElementById(id); if (el) el.value = '';
+            });
+        }
+
+        function closeCreateEventModal() {
+            const modal = document.getElementById('create-event-modal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        async function submitCreateEvent() {
+            if (!window.orgAuthToken) {
+                showToast('Please login as organization admin first.', 'error');
+                return;
+            }
+            const payload = {
+                title: (document.getElementById('modal-event-title').value || '').trim(),
+                description: (document.getElementById('modal-event-description').value || '').trim(),
+                location: (document.getElementById('modal-event-location').value || '').trim(),
+                start_date: (document.getElementById('modal-event-start').value || '').trim(),
+                end_date: (document.getElementById('modal-event-end').value || '').trim(),
+            };
+            if (!payload.title || !payload.description || !payload.location) {
+                showToast('Please fill in Event Name, Description, and Location.', 'error');
+                return;
+            }
+            const btn = document.getElementById('modal-submit-btn');
+            if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
+            try {
+                const res = await fetch('/api/events', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', ...getOrgAuthHeaders() },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (!data.ok) {
+                    showToast(data.message || 'Could not create event.', 'error');
+                    return;
+                }
+                showToast('Event created and saved to CSV!', 'success');
+                closeCreateEventModal();
+                loadOrgEvents();
+                fetchAndRenderNGOs && fetchAndRenderNGOs('dashboard-ngo-cards', 3);
+                fetchAndRenderEvents && fetchAndRenderEvents();
+            } catch(_) {
+                showToast('Event creation failed. Please try again.', 'error');
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<span class="material-symbols-outlined text-lg">add_circle</span> Create Event';
+                }
+            }
+        }
+
+        function orgLogout() {
+            window.orgAuthToken = '';
+            window.currentOrg = null;
+            localStorage.removeItem('sahara_org_auth_token');
+            updateAuthUI();
             switchTab('home');
+            showToast('Organization logged out.', 'info');
         }
     </script>
 </body>

@@ -2,7 +2,7 @@
 
 Status: Ready to share | Updated: March 29, 2026
 
-## Fast Setup (Friends)
+## Fast Setup 
 
 Run from project root:
 
